@@ -30,12 +30,23 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted, watch } from 'vue';
+import { useSessionStore } from '~/stores/session';
+
 const route = useRoute();
 const loading = ref(false);
 const statusState = ref<string | null>(null);
 const error = ref<string | null>(null);
 const message = ref<string | null>(null);
 const transactionId = ref<string | null>(null);
+const session = useSessionStore();
+const supporterBannerState = useState('supporter-banner-visible', () => false);
+
+const analytics = (event: string, props?: Record<string, any>) => {
+  if (process.client && typeof (window as any).plausible === 'function') {
+    (window as any).plausible(event, { props });
+  }
+};
 
 const deriveTransactionId = () => {
   if (process.server) {
@@ -69,11 +80,17 @@ const refreshStatus = async () => {
     const response = await $fetch<{ status: any }>(`/api/phonepe/status/${transactionId.value}`);
     const state = response.status?.data?.state ?? 'PENDING';
     statusState.value = state;
+    analytics('membership_status_poll', { state, context: 'success-page' });
 
     if (state === 'COMPLETED') {
       message.value = 'Payment confirmed! You now have ad-free access.';
+      analytics('membership_payment_success', { state, context: 'success-page' });
+      localStorage.removeItem('tadam-supporter-banner-dismissed');
+      supporterBannerState.value = true;
+      session.fetchProfile(true);
     } else if (state === 'FAILED' || state === 'DECLINED') {
       error.value = 'Payment failed or was declined. Please retry your purchase.';
+      analytics('membership_payment_failure', { state, context: 'success-page' });
     } else {
       message.value = 'Payment is still being processed by the bank. Please check again soon.';
     }
@@ -85,6 +102,7 @@ const refreshStatus = async () => {
 };
 
 onMounted(() => {
+  session.fetchProfile().catch(() => {});
   deriveTransactionId();
   if (!transactionId.value) {
     message.value = 'We could not find a payment reference. Start a new membership purchase.';

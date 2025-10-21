@@ -7,7 +7,15 @@ type CreateOrderInput = {
   userId: number;
 };
 
+type RefundInput = {
+  merchantTransactionId: string;
+  amount: number;
+  userId: number;
+  reason?: string;
+};
+
 const PAY_ENDPOINT = '/pg/v1/pay';
+const REFUND_ENDPOINT = '/pg/v1/refund';
 
 const getConfig = () => {
   const merchantId = process.env.PHONEPE_MERCHANT_ID;
@@ -211,5 +219,60 @@ export default ({ strapi }) => ({
         membership_expires_at: nextMonth,
       },
     });
+  },
+
+  async initiateRefund({ merchantTransactionId, amount, userId, reason }: RefundInput) {
+    const config = getConfig();
+    const paiseAmount = Math.round(amount * 100);
+
+    if (!merchantTransactionId) {
+      throw new Error('Merchant transaction reference is required for refunds.');
+    }
+
+    if (Number.isNaN(paiseAmount) || paiseAmount <= 0) {
+      throw new Error('Invalid amount supplied for refund.');
+    }
+
+    const refundTransactionId = generateTransactionId();
+    const payload = {
+      merchantId: config.merchantId,
+      originalTransactionId: merchantTransactionId,
+      merchantTransactionId: refundTransactionId,
+      amount: paiseAmount,
+      callbackUrl: config.callbackUrl,
+      reason,
+    };
+
+    const payloadBase64 = Buffer.from(JSON.stringify(payload)).toString('base64');
+    const checksum = createChecksum(payloadBase64, REFUND_ENDPOINT, config.saltKey, config.saltIndex);
+
+    const response = await fetch(`${config.baseUrl}${REFUND_ENDPOINT}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-VERIFY': checksum,
+        'X-CLIENT-ID': config.merchantId,
+      },
+      body: JSON.stringify({ request: payloadBase64 }),
+    });
+
+    const data = (await response.json()) as any;
+
+    if (!response.ok || data?.success !== true) {
+      strapi.log.error('PhonePe refund request failed', data);
+      throw new Error(data?.message ?? 'Unable to initiate refund with PhonePe.');
+    }
+
+    strapi.log.info('PhonePe refund initiated', {
+      userId,
+      merchantTransactionId,
+      refundTransactionId,
+    });
+
+    return {
+      refundRequestId: data?.data?.merchantTransactionId ?? refundTransactionId,
+      raw: data?.data ?? null,
+      payload,
+    };
   },
 });

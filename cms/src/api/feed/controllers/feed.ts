@@ -1,3 +1,5 @@
+import { getRedisClient } from '../../../utils/cache';
+
 const DEFAULT_LIMIT = 6;
 
 const normalizeArticle = (article: any, reason: string) => ({
@@ -8,7 +10,7 @@ const normalizeArticle = (article: any, reason: string) => ({
   category: article.categories?.[0]?.name ?? null,
   categories: article.categories?.map((c: any) => c.slug ?? c.name).filter(Boolean) ?? [],
   districts: article.districts?.map((d: any) => d.slug ?? d.name).filter(Boolean) ?? [],
-  publishedAt: article.published_at ?? article.updatedAt ?? article.createdAt,
+  publishedAt: article.published_at ?? article.updatedAt ?? article.createdAt ?? null,
   reason,
 });
 
@@ -16,8 +18,9 @@ const uniqueArticles = (items: any[], reason: string, seen: Set<string>) => {
   const result: any[] = [];
   for (const item of items) {
     const id = item.id?.toString();
-    if (!id) continue;
-    if (seen.has(id)) continue;
+    if (!id || seen.has(id)) {
+      continue;
+    }
     seen.add(id);
     result.push(normalizeArticle(item, reason));
   }
@@ -35,6 +38,13 @@ const buildFiltersFromArray = (field: string, values: string[]) => {
   };
 };
 
+const getCacheConfig = (strapi: any) => {
+  const feedConfig = strapi.config.get('custom.feed', {});
+  const cacheTTL = Number(feedConfig.cacheTTL ?? process.env.FEED_CACHE_TTL ?? 120);
+  const extraSections = feedConfig.extraSections ?? [];
+  return { cacheTTL, extraSections };
+};
+
 export default ({ strapi }) => ({
   async find(ctx) {
     const categoriesParam = ctx.query.categories as string | undefined;
@@ -46,6 +56,24 @@ export default ({ strapi }) => ({
     const districts = districtsParam
       ? districtsParam.split(',').map((item) => item.trim()).filter(Boolean)
       : [];
+
+    const { cacheTTL, extraSections } = getCacheConfig(strapi);
+    const redis = getRedisClient(strapi);
+    const allowCache = !ctx.state?.user;
+    const personalized = categories.length > 0 || districts.length > 0;
+    const cacheKey = `feed:${categories.slice().sort().join('|')}:${districts.slice().sort().join('|')}`;
+
+    if (allowCache && redis) {
+      try {
+        const cached = await redis.get(cacheKey);
+        if (cached) {
+          ctx.body = JSON.parse(cached);
+          return;
+        }
+      } catch (error) {
+        strapi.log.warn('Feed cache fetch failed', error);
+      }
+    }
 
     const seen = new Set<string>();
     const populate = {
@@ -99,6 +127,32 @@ export default ({ strapi }) => ({
       limit: DEFAULT_LIMIT,
     });
 
+    const extraSectionResults: any[] = [];
+    for (const sectionConfig of extraSections) {
+      try {
+        const articles = await strapi.entityService.findMany('api::article.article', {
+          filters: { status: 'published', ...(sectionConfig.filters ?? {}) },
+          sort: sectionConfig.sort ?? { published_at: 'desc' },
+          populate,
+          limit: sectionConfig.limit ?? DEFAULT_LIMIT,
+        });
+
+        if (articles.length) {
+          extraSectionResults.push({
+            slot: sectionConfig.slot,
+            title: sectionConfig.title,
+            items: uniqueArticles(
+              articles,
+              sectionConfig.reason ?? 'Curated coverage based on your interests.',
+              seen,
+            ),
+          });
+        }
+      } catch (error) {
+        strapi.log.warn(`Failed to resolve extra feed section ${sectionConfig.slot}`, error);
+      }
+    }
+
     const sections: any[] = [
       {
         slot: 'alerts',
@@ -122,14 +176,26 @@ export default ({ strapi }) => ({
       });
     }
 
+    if (extraSectionResults.length) {
+      sections.push(...extraSectionResults);
+    }
+
     sections.push({
       slot: 'outside',
       title: 'Beyond My District',
       items: uniqueArticles(outside, 'Broader national & international coverage.', seen),
     });
 
-    ctx.body = {
-      sections,
-    };
+    const response = { sections };
+    ctx.body = response;
+
+    if (allowCache && redis) {
+      const ttl = personalized ? Math.max(30, Math.round(cacheTTL / 2)) : cacheTTL;
+      try {
+        await redis.set(cacheKey, JSON.stringify(response), 'EX', ttl);
+      } catch (error) {
+        strapi.log.warn('Feed cache write failed', error);
+      }
+    }
   },
 });

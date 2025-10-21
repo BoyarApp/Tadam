@@ -37,6 +37,9 @@ Deliver a Tamil-first news platform that is fast on low-end phones, builds trust
 - PhonePe integration: memberships + advertiser billing, ledger reconciliation, GST invoices (Razorpay optional later).
 - Analytics & monitoring: Plausible page analytics, Sentry error tracking, custom event hooks.
 - Feed API: `/feed` aggregates editor picks, trending stories, preference-matched articles, and national/international coverage.
+- Account API: `/account(profile|ledger|membership/cancel)` exposes membership status, expiry, supporter ledger, and a refund workflow tied to PhonePe.
+- Membership reminders: daily Strapi cron nudges supporters whose passes expire within 3 days and logs lifecycle events.
+- Redis caching on feed responses (anonymous mixes TTL configurable) with personalised bypass.
 - Search: Meilisearch tuned for Tamil (ICU, transliteration, synonyms).
 - SEO/LLM readiness: structured data, News/Discover sitemaps, optional RSS/Atom.
 - UI stack: Vuetify 3 selected over Nuxt UI for its enterprise component coverage (data tables, form wizardry, admin dashboards) and Nuxt module support; Nuxt UI remains a future option for lightweight micro-sites if needed.

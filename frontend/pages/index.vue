@@ -29,11 +29,14 @@
       :items="feed.items"
       :badge="feed.slot === 'my-mix' ? preferenceBadge : undefined"
     />
+
+    <AdSlot slot-name="inline" />
   </VContainer>
 </template>
 
 <script setup lang="ts">
 import { useOnline } from '@vueuse/core';
+import { computed } from 'vue';
 import { useFeed } from '~/composables/useFeed';
 import { usePreferencesStore } from '~/stores/preferences';
 

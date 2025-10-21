@@ -99,4 +99,41 @@ describe('PhonePe service', () => {
       expect.objectContaining({ data: expect.objectContaining({ membership_status: 'active' }) }),
     );
   });
+
+  it('initiates refund requests with PhonePe', async () => {
+    (global.fetch as jest.Mock).mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: {
+          merchantTransactionId: 'REF-TX-1',
+        },
+      }),
+    });
+
+    const logInfo = jest.fn();
+    const service = phonepeServiceFactory({
+      strapi: {
+        entityService: {},
+        log: {
+          error: jest.fn(),
+          info: logInfo,
+        },
+      },
+    } as any);
+
+    const result = await service.initiateRefund({
+      merchantTransactionId: 'TX-789',
+      amount: 199,
+      userId: 77,
+      reason: 'user_requested',
+    });
+
+    expect(result.refundRequestId).toBe('REF-TX-1');
+    expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain('/pg/v1/refund');
+    expect(logInfo).toHaveBeenCalledWith(
+      'PhonePe refund initiated',
+      expect.objectContaining({ merchantTransactionId: 'TX-789' }),
+    );
+  });
 });

@@ -31,6 +31,12 @@ describe('feed controller', () => {
         entityService: {
           findMany: findManyMock,
         },
+        config: {
+          get: jest.fn(() => ({ feed: { cacheTTL: 60, extraSections: [] } })),
+        },
+        log: {
+          warn: jest.fn(),
+        },
       },
     } as any);
 

@@ -135,6 +135,15 @@
       "relation": "oneToMany",
       "target": "api::ad-campaign.ad-campaign",
       "mappedBy": "advertiser"
+    },
+    "membership_reminder_sent_at": {
+      "type": "datetime"
+    },
+    "membership_cancel_requested_at": {
+      "type": "datetime"
+    },
+    "membership_cancel_reason": {
+      "type": "text"
     }
   }
 }
