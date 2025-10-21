@@ -132,6 +132,7 @@ export const seedRoles = async (strapi: Core.Strapi) => {
       {
         filters: { type: role.type },
         limit: 1,
+        populate: ['permissions'],
       },
     );
 
@@ -143,9 +144,10 @@ export const seedRoles = async (strapi: Core.Strapi) => {
         permissions: role.permissions,
       });
     } else {
-      await roleService.updateRole(existing[0].id, {
+      const [existingRole] = existing as Array<Record<string, any>>;
+      await roleService.updateRole(existingRole.id, {
         permissions: {
-          ...existing[0].permissions,
+          ...(existingRole.permissions ?? {}),
           ...role.permissions,
         },
       });

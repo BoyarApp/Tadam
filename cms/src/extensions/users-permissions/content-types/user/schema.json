@@ -2,7 +2,10 @@
   "collectionName": "up_users",
   "info": {
     "name": "user",
-    "description": ""
+    "description": "",
+    "displayName": "User",
+    "singularName": "user",
+    "pluralName": "users"
   },
   "options": {
     "draftAndPublish": false,
@@ -67,12 +70,14 @@
     "districts": {
       "type": "relation",
       "relation": "manyToMany",
-      "target": "api::district.district"
+      "target": "api::district.district",
+      "inversedBy": "followers"
     },
     "categories": {
       "type": "relation",
       "relation": "manyToMany",
-      "target": "api::category.category"
+      "target": "api::category.category",
+      "inversedBy": "followers"
     },
     "membership_status": {
       "type": "enumeration",

@@ -65,7 +65,12 @@ const districts = [
   'Virudhunagar'
 ];
 
-const glossaryEntries = [
+const glossaryEntries: Array<{
+  term: string;
+  language: 'en' | 'ta' | 'hi' | 'te' | 'ml';
+  translation: string;
+  context: string;
+}> = [
   {
     term: 'Chief Minister',
     language: 'en',

@@ -1,13 +1,51 @@
 import path from 'path';
 
+const resolveString = (value: string | undefined, fallback: string) => {
+  if (!value) {
+    return fallback;
+  }
+  const normalised = value.trim().toLowerCase();
+  if (value.includes('${') || normalised === '' || normalised === 'base' || normalised === 'undefined') {
+    return fallback;
+  }
+  return value;
+};
+
+const resolveInt = (value: string | number | undefined, fallback: number) => {
+  if (typeof value === 'number' && !Number.isNaN(value)) {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isNaN(parsed)) {
+      return parsed;
+    }
+  }
+  return fallback;
+};
+
 export default ({ env }) => {
-  const client = env('DATABASE_CLIENT', 'sqlite');
+  const rawClient = env('DATABASE_CLIENT', 'sqlite');
+  let client = resolveString(rawClient, 'sqlite') as 'sqlite' | 'postgres' | 'mysql';
+  const rawHost = resolveString(env('DATABASE_HOST'), 'localhost');
+  const rawUrl = env('DATABASE_URL');
+  const connectionString =
+    rawUrl && !rawUrl.includes('${') && rawUrl.trim() !== '' ? rawUrl : undefined;
+
+  if (
+    client === 'postgres' &&
+    !connectionString &&
+    (!process.env.DATABASE_HOST || process.env.DATABASE_HOST.trim() === '') &&
+    (!process.env.DATABASE_USERNAME || process.env.DATABASE_USERNAME.trim() === '')
+  ) {
+    client = 'sqlite';
+  }
 
   const connections = {
     mysql: {
       connection: {
-        host: env('DATABASE_HOST', 'localhost'),
-        port: env.int('DATABASE_PORT', 3306),
+        host: resolveString(env('DATABASE_HOST'), 'localhost'),
+        port: resolveInt(env('DATABASE_PORT'), 3306),
         database: env('DATABASE_NAME', 'strapi'),
         user: env('DATABASE_USERNAME', 'strapi'),
         password: env('DATABASE_PASSWORD', 'strapi'),
@@ -24,9 +62,9 @@ export default ({ env }) => {
     },
     postgres: {
       connection: {
-        connectionString: env('DATABASE_URL'),
-        host: env('DATABASE_HOST', 'localhost'),
-        port: env.int('DATABASE_PORT', 5432),
+        connectionString,
+        host: rawHost,
+        port: resolveInt(env('DATABASE_PORT'), 5432),
         database: env('DATABASE_NAME', 'strapi'),
         user: env('DATABASE_USERNAME', 'strapi'),
         password: env('DATABASE_PASSWORD', 'strapi'),
@@ -53,8 +91,8 @@ export default ({ env }) => {
   return {
     connection: {
       client,
-      ...connections[client],
-      acquireConnectionTimeout: env.int('DATABASE_CONNECTION_TIMEOUT', 60000),
+      ...(connections[client] ?? connections.sqlite),
+      acquireConnectionTimeout: resolveInt(env('DATABASE_CONNECTION_TIMEOUT'), 60000),
     },
   };
 };

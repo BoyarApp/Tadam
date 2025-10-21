@@ -86,12 +86,12 @@ export default factories.createCoreService('api::article.article', ({ strapi }) 
     }
 
     const updated = await super.update(params);
-    const changeType =
+    const changeType: 'draft' | 'review' | 'publish' | 'rollback' | 'other' =
       nextStatus === 'published'
         ? 'publish'
         : nextStatus === 'review'
           ? 'review'
-          : 'update';
+          : 'other';
 
     await this.createVersion(updated.id, changeType, sanitizeSnapshot(updated));
     return updated;
@@ -99,7 +99,7 @@ export default factories.createCoreService('api::article.article', ({ strapi }) 
 
   async createVersion(
     articleId: number,
-    changeType: 'draft' | 'review' | 'publish' | 'rollback' | 'update',
+    changeType: 'draft' | 'review' | 'publish' | 'rollback' | 'other',
     snapshot: Record<string, unknown> | null,
   ) {
     const user = getRequestUser(strapi);
@@ -107,7 +107,7 @@ export default factories.createCoreService('api::article.article', ({ strapi }) 
     const results = (await strapi.entityService.findMany(
       'api::article-version.article-version',
       {
-        filters: { article: articleId },
+        filters: { article: { id: articleId } },
         sort: { version_number: 'desc' },
         limit: 1,
       },
@@ -122,7 +122,7 @@ export default factories.createCoreService('api::article.article', ({ strapi }) 
         article: articleId,
         change_type: changeType,
         version_number: nextVersionNumber,
-        snapshot,
+        snapshot: snapshot ? JSON.parse(JSON.stringify(snapshot)) : {},
         changed_by: user?.id,
       },
     });

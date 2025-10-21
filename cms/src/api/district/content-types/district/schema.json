@@ -60,6 +60,12 @@
       "relation": "manyToMany",
       "target": "api::govt-scheme.govt-scheme",
       "mappedBy": "districts"
+    },
+    "followers": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "districts"
     }
   }
 }
