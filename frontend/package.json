@@ -1,0 +1,49 @@
+{
+  "name": "frontend",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "nuxt build",
+    "dev": "nuxt dev",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "lint": "eslint --ext .ts,.vue --ignore-path .gitignore .",
+    "lint:fix": "eslint --ext .ts,.vue --fix --ignore-path .gitignore .",
+    "format": "prettier --check .",
+    "format:write": "prettier --write .",
+    "test:unit": "vitest run",
+    "test:ui": "vitest --ui"
+  },
+  "dependencies": {
+    "@fontsource/mukta-malar": "^5.2.7",
+    "@mdi/font": "^7.4.47",
+    "@vueuse/core": "^13.9.0",
+    "luxon": "^3.7.2",
+    "nuxt": "^4.1.3",
+    "pinia": "^3.0.3",
+    "vue": "^3.5.22",
+    "vue-router": "^4.6.3",
+    "vuetify": "^3.10.5"
+  },
+  "devDependencies": {
+    "@nuxtjs/eslint-config-typescript": "^12.1.0",
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "@pinia/nuxt": "^0.11.2",
+    "@types/node": "^20.19.23",
+    "@vite-pwa/nuxt": "^1.0.7",
+    "@vitejs/plugin-vue": "^6.0.1",
+    "@vitest/ui": "3.2.4",
+    "@vue/test-utils": "^2.4.6",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^8.57.0",
+    "jsdom": "24.0.0",
+    "postcss": "^8.5.6",
+    "prettier": "^3.6.2",
+    "sass": "^1.93.2",
+    "tailwindcss": "3.4.15",
+    "vite-plugin-vuetify": "^2.1.2",
+    "vitest": "3.2.4"
+  }
+}

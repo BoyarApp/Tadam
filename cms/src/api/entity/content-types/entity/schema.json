@@ -1,0 +1,71 @@
+{
+  "kind": "collectionType",
+  "collectionName": "entities",
+  "info": {
+    "singularName": "entity",
+    "pluralName": "entities",
+    "displayName": "Entity",
+    "description": "People, places, organisations, films, teams etc."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "entity_type": {
+      "type": "enumeration",
+      "enum": [
+        "person",
+        "place",
+        "organisation",
+        "film",
+        "team",
+        "event",
+        "other"
+      ],
+      "required": true
+    },
+    "name_ta": {
+      "type": "string",
+      "required": true
+    },
+    "name_en": {
+      "type": "string"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name_ta",
+      "required": true
+    },
+    "aliases": {
+      "type": "json",
+      "default": []
+    },
+    "description": {
+      "type": "text"
+    },
+    "wiki_url": {
+      "type": "string"
+    },
+    "districts": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::district.district",
+      "inversedBy": "entities"
+    },
+    "categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category",
+      "inversedBy": "entities"
+    },
+    "articles": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::article.article",
+      "mappedBy": "entities"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

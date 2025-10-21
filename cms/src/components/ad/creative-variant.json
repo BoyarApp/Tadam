@@ -1,0 +1,36 @@
+{
+  "collectionName": "components_ad_creative_variants",
+  "info": {
+    "displayName": "Creative Variant",
+    "icon": "layers",
+    "description": "Variant for an ad creative"
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "weight": {
+      "type": "integer",
+      "default": 1,
+      "min": 0
+    },
+    "asset": {
+      "type": "media",
+      "multiple": false,
+      "required": true
+    },
+    "headline": {
+      "type": "string"
+    },
+    "cta": {
+      "type": "string"
+    },
+    "landing_url": {
+      "type": "string"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

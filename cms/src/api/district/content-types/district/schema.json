@@ -1,0 +1,65 @@
+{
+  "kind": "collectionType",
+  "collectionName": "districts",
+  "info": {
+    "singularName": "district",
+    "pluralName": "districts",
+    "displayName": "District",
+    "description": "Tamil Nadu districts and optional hierarchy metadata"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {
+    "i18n": {
+      "localized": false
+    }
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "entities": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::entity.entity",
+      "mappedBy": "districts"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name",
+      "required": true
+    },
+    "state": {
+      "type": "string",
+      "default": "Tamil Nadu"
+    },
+    "iso_code": {
+      "type": "string",
+      "unique": true
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "articles": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::article.article",
+      "mappedBy": "districts"
+    },
+    "events": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::festival.festival",
+      "mappedBy": "districts"
+    },
+    "schemes": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::govt-scheme.govt-scheme",
+      "mappedBy": "districts"
+    }
+  }
+}

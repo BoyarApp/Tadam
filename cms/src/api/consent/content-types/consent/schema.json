@@ -1,0 +1,36 @@
+{
+  "kind": "collectionType",
+  "collectionName": "consents",
+  "info": {
+    "singularName": "consent",
+    "pluralName": "consents",
+    "displayName": "User Consent"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "personalization": {
+      "type": "boolean",
+      "default": true
+    },
+    "analytics": {
+      "type": "boolean",
+      "default": true
+    },
+    "marketing": {
+      "type": "boolean",
+      "default": false
+    },
+    "user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "consent",
+      "unique": true
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

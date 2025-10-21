@@ -1,0 +1,22 @@
+{
+  "collectionName": "components_article_fact_entries",
+  "info": {
+    "displayName": "Fact Entry",
+    "description": "Key fact item for fact boxes",
+    "icon": "bulletList"
+  },
+  "attributes": {
+    "label": {
+      "type": "string",
+      "required": true
+    },
+    "value": {
+      "type": "text",
+      "required": true
+    },
+    "sources": {
+      "type": "json",
+      "default": []
+    }
+  }
+}

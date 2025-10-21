@@ -1,0 +1,71 @@
+{
+  "kind": "collectionType",
+  "collectionName": "categories",
+  "info": {
+    "singularName": "category",
+    "pluralName": "categories",
+    "displayName": "Category",
+    "description": "Editorial categories for articles and ad targeting"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true,
+      "unique": true
+    },
+    "glossary_entries": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::glossary-entry.glossary-entry",
+      "mappedBy": "categories"
+    },
+    "festivals": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::festival.festival",
+      "mappedBy": "categories"
+    },
+    "govt_schemes": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::govt-scheme.govt-scheme",
+      "mappedBy": "categories"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "name",
+      "required": true
+    },
+    "description": {
+      "type": "text"
+    },
+    "icon": {
+      "type": "string"
+    },
+    "synonyms": {
+      "type": "json",
+      "default": []
+    },
+    "articles": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::article.article",
+      "mappedBy": "categories"
+    },
+    "entities": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::entity.entity",
+      "mappedBy": "categories"
+    },
+    "campaigns": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::ad-campaign.ad-campaign",
+      "mappedBy": "target_categories"
+    }
+  }
+}

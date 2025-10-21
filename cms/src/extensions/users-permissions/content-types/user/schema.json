@@ -1,0 +1,140 @@
+{
+  "collectionName": "up_users",
+  "info": {
+    "name": "user",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": false,
+    "timestamps": true
+  },
+  "pluginOptions": {
+    "content-manager": {
+      "visible": false
+    },
+    "content-type-builder": {
+      "visible": false
+    }
+  },
+  "attributes": {
+    "username": {
+      "type": "string",
+      "minLength": 3,
+      "required": true,
+      "unique": true
+    },
+    "email": {
+      "type": "email",
+      "minLength": 6,
+      "required": true,
+      "unique": true
+    },
+    "provider": {
+      "type": "string"
+    },
+    "password": {
+      "type": "password",
+      "minLength": 6
+    },
+    "resetPasswordToken": {
+      "type": "string",
+      "configurable": false
+    },
+    "confirmationToken": {
+      "type": "string",
+      "configurable": false
+    },
+    "confirmed": {
+      "type": "boolean",
+      "default": false
+    },
+    "blocked": {
+      "type": "boolean",
+      "default": false
+    },
+    "role": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.role",
+      "inversedBy": "users"
+    },
+    "name": {
+      "type": "string"
+    },
+    "phone": {
+      "type": "string"
+    },
+    "districts": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::district.district"
+    },
+    "categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category"
+    },
+    "membership_status": {
+      "type": "enumeration",
+      "enum": [
+        "free",
+        "active",
+        "grace",
+        "expired",
+        "cancelled"
+      ],
+      "default": "free"
+    },
+    "membership_expires_at": {
+      "type": "datetime"
+    },
+    "kyc_status": {
+      "type": "enumeration",
+      "enum": [
+        "none",
+        "pending",
+        "verified",
+        "rejected"
+      ],
+      "default": "none"
+    },
+    "oauth_profiles": {
+      "type": "json"
+    },
+    "articles": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::article.article",
+      "mappedBy": "author"
+    },
+    "submissions": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::submission.submission",
+      "mappedBy": "submitted_by"
+    },
+    "ai_assist_logs": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::ai-assist-log.ai-assist-log",
+      "mappedBy": "editor"
+    },
+    "article_versions": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::article-version.article-version",
+      "mappedBy": "changed_by"
+    },
+    "consent": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::consent.consent"
+    },
+    "ad_campaigns": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::ad-campaign.ad-campaign",
+      "mappedBy": "advertiser"
+    }
+  }
+}

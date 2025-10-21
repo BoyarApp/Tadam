@@ -1,0 +1,126 @@
+{
+  "kind": "collectionType",
+  "collectionName": "articles",
+  "info": {
+    "singularName": "article",
+    "pluralName": "articles",
+    "displayName": "Article",
+    "description": "Published editorial content"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {
+    "i18n": {
+      "localized": false
+    }
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "versions": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::article-version.article-version",
+      "mappedBy": "article"
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "summary": {
+      "type": "text",
+      "required": true
+    },
+    "content": {
+      "type": "richtext",
+      "required": true
+    },
+    "hero_image": {
+      "type": "media",
+      "multiple": false
+    },
+    "gallery": {
+      "type": "media",
+      "multiple": true
+    },
+    "categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category",
+      "inversedBy": "articles"
+    },
+    "districts": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::district.district",
+      "inversedBy": "articles"
+    },
+    "tags": {
+      "type": "json",
+      "default": []
+    },
+    "is_national": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_international": {
+      "type": "boolean",
+      "default": false
+    },
+    "is_featured": {
+      "type": "boolean",
+      "default": false
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "review",
+        "approved",
+        "published"
+      ],
+      "default": "draft"
+    },
+    "entities": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::entity.entity",
+      "inversedBy": "articles"
+    },
+    "fact_box": {
+      "type": "component",
+      "repeatable": true,
+      "component": "article.fact-entry"
+    },
+    "source_links": {
+      "type": "component",
+      "repeatable": true,
+      "component": "common.source-link"
+    },
+    "explainers": {
+      "type": "json",
+      "default": []
+    },
+    "meta": {
+      "type": "json"
+    },
+    "published_at_override": {
+      "type": "datetime"
+    },
+    "author": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "articles"
+    },
+    "editor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "kind": "collectionType",
+  "collectionName": "payments_ledgers",
+  "info": {
+    "singularName": "payments-ledger",
+    "pluralName": "payments-ledgers",
+    "displayName": "Payments Ledger Entry"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "entry_type": {
+      "type": "enumeration",
+      "enum": [
+        "debit",
+        "credit",
+        "refund",
+        "adjustment"
+      ],
+      "required": true
+    },
+    "amount": {
+      "type": "decimal",
+      "required": true
+    },
+    "currency": {
+      "type": "string",
+      "default": "INR"
+    },
+    "tax_breakup": {
+      "type": "json",
+      "default": {}
+    },
+    "razorpay_txn_id": {
+      "type": "string"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "completed",
+        "failed"
+      ],
+      "default": "completed"
+    },
+    "notes": {
+      "type": "text"
+    },
+    "user": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "campaign": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::ad-campaign.ad-campaign"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

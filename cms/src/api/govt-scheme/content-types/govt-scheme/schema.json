@@ -1,0 +1,66 @@
+{
+  "kind": "collectionType",
+  "collectionName": "govt_schemes",
+  "info": {
+    "singularName": "govt-scheme",
+    "pluralName": "govt-schemes",
+    "displayName": "Government Scheme",
+    "description": "Central and state welfare schemes"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true
+    },
+    "slug": {
+      "type": "uid",
+      "targetField": "title",
+      "required": true
+    },
+    "level": {
+      "type": "enumeration",
+      "enum": [
+        "central",
+        "state"
+      ],
+      "required": true,
+      "default": "state"
+    },
+    "state": {
+      "type": "string",
+      "default": "Tamil Nadu"
+    },
+    "eligibility": {
+      "type": "richtext"
+    },
+    "how_to_apply": {
+      "type": "richtext"
+    },
+    "benefits": {
+      "type": "text"
+    },
+    "categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category",
+      "inversedBy": "govt_schemes"
+    },
+    "districts": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::district.district",
+      "inversedBy": "schemes"
+    },
+    "documents_required": {
+      "type": "json"
+    },
+    "external_links": {
+      "type": "component",
+      "repeatable": true,
+      "component": "common.source-link"
+    }
+  }
+}

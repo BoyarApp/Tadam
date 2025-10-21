@@ -1,0 +1,51 @@
+# Project-wide ignore patterns
+
+# Node & pnpm dependencies / cache
+node_modules/
+**/node_modules/
+.pnpm-store/
+pnpm-debug.log
+
+# Environment files
+.env
+.env.*
+cms/.env
+cms/.env.*
+frontend/.env
+frontend/.env.*
+infra/env/.env
+
+# Build / output artifacts
+frontend/.nuxt/
+frontend/.output/
+frontend/dist/
+frontend/.cache/
+cms/build/
+cms/dist/
+cms/.cache/
+cms/.tmp/
+cms/public/uploads/
+coverage/
+
+# Logs & temp
+*.log
+*.tmp
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDE / editor settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# TypeScript incremental state
+*.tsbuildinfo
+
+# Docker artefacts
+.docker/
+

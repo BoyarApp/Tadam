@@ -1,0 +1,110 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ad_campaigns",
+  "info": {
+    "singularName": "ad-campaign",
+    "pluralName": "ad-campaigns",
+    "displayName": "Ad Campaign",
+    "description": "Self-serve advertiser campaigns"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "name": {
+      "type": "string",
+      "required": true
+    },
+    "objective": {
+      "type": "enumeration",
+      "enum": [
+        "awareness",
+        "traffic",
+        "leads"
+      ],
+      "required": true,
+      "default": "awareness"
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "running",
+        "paused",
+        "completed",
+        "cancelled"
+      ],
+      "required": true,
+      "default": "draft"
+    },
+    "start_at": {
+      "type": "datetime"
+    },
+    "end_at": {
+      "type": "datetime"
+    },
+    "budget_total": {
+      "type": "decimal",
+      "required": true
+    },
+    "daily_cap": {
+      "type": "decimal"
+    },
+    "max_freq_per_user": {
+      "type": "integer",
+      "default": 3
+    },
+    "target_categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category",
+      "inversedBy": "campaigns"
+    },
+    "target_districts": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::district.district"
+    },
+    "target_devices": {
+      "type": "json",
+      "default": []
+    },
+    "festival_targets": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::festival.festival"
+    },
+    "advertiser": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "ad_campaigns",
+      "required": true
+    },
+    "payment_status": {
+      "type": "enumeration",
+      "enum": [
+        "pending",
+        "paid",
+        "refunded"
+      ],
+      "default": "pending"
+    },
+    "invoice_id": {
+      "type": "string"
+    },
+    "wallet_balance": {
+      "type": "decimal",
+      "default": 0
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "creatives": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::ad-creative.ad-creative",
+      "mappedBy": "campaign"
+    }
+  }
+}

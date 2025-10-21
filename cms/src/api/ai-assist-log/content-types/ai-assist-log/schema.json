@@ -1,0 +1,58 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ai_assist_logs",
+  "info": {
+    "singularName": "ai-assist-log",
+    "pluralName": "ai-assist-logs",
+    "displayName": "AI Assist Log"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "operation_type": {
+      "type": "enumeration",
+      "enum": [
+        "translate",
+        "spell_check",
+        "entity_tag",
+        "rewrite",
+        "fact_extract",
+        "summary",
+        "other"
+      ],
+      "required": true
+    },
+    "input_text": {
+      "type": "text"
+    },
+    "output_text": {
+      "type": "text"
+    },
+    "confidence_score": {
+      "type": "decimal"
+    },
+    "accepted": {
+      "type": "boolean",
+      "default": false
+    },
+    "metadata": {
+      "type": "json"
+    },
+    "article": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::article.article"
+    },
+    "submission": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::submission.submission"
+    },
+    "editor": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

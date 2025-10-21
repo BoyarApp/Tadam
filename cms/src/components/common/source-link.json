@@ -1,0 +1,18 @@
+{
+  "collectionName": "components_common_source_links",
+  "info": {
+    "displayName": "Source Link",
+    "icon": "link",
+    "description": "External source reference"
+  },
+  "attributes": {
+    "label": {
+      "type": "string",
+      "required": true
+    },
+    "url": {
+      "type": "string",
+      "required": true
+    }
+  }
+}

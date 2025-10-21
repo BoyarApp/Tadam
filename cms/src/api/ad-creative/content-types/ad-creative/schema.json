@@ -1,0 +1,59 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ad_creatives",
+  "info": {
+    "singularName": "ad-creative",
+    "pluralName": "ad-creatives",
+    "displayName": "Ad Creative",
+    "description": "Creative assets associated with campaigns"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "campaign": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::ad-campaign.ad-campaign",
+      "inversedBy": "creatives",
+      "required": true
+    },
+    "format": {
+      "type": "enumeration",
+      "enum": [
+        "inline",
+        "sidebar",
+        "gallery_sponsor"
+      ],
+      "required": true
+    },
+    "primary_asset": {
+      "type": "media",
+      "multiple": false,
+      "required": true
+    },
+    "headline": {
+      "type": "string",
+      "required": true
+    },
+    "cta": {
+      "type": "string"
+    },
+    "landing_url": {
+      "type": "string",
+      "required": true
+    },
+    "approved": {
+      "type": "boolean",
+      "default": false
+    },
+    "variants": {
+      "type": "component",
+      "repeatable": true,
+      "component": "ad.creative-variant"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

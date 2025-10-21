@@ -1,0 +1,52 @@
+{
+  "kind": "collectionType",
+  "collectionName": "submissions",
+  "info": {
+    "singularName": "submission",
+    "pluralName": "submissions",
+    "displayName": "Submission",
+    "description": "Contributor submissions awaiting editorial review"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "article_draft": {
+      "type": "json",
+      "required": true
+    },
+    "status": {
+      "type": "enumeration",
+      "enum": [
+        "submitted",
+        "needs_changes",
+        "approved",
+        "rejected"
+      ],
+      "default": "submitted",
+      "required": true
+    },
+    "editor_notes": {
+      "type": "text"
+    },
+    "submitted_by": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "submissions"
+    },
+    "reviewed_by": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    },
+    "linked_article": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "api::article.article"
+    },
+    "metadata": {
+      "type": "json"
+    }
+  }
+}

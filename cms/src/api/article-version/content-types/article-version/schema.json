@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "article_versions",
+  "info": {
+    "singularName": "article-version",
+    "pluralName": "article-versions",
+    "displayName": "Article Version"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "version_number": {
+      "type": "integer",
+      "required": true
+    },
+    "change_type": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "review",
+        "publish",
+        "rollback",
+        "other"
+      ],
+      "required": true
+    },
+    "snapshot": {
+      "type": "json",
+      "required": true
+    },
+    "article": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::article.article",
+      "inversedBy": "versions",
+      "required": true
+    },
+    "changed_by": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "plugin::users-permissions.user"
+    }
+  }
+}

@@ -1,0 +1,46 @@
+{
+  "kind": "collectionType",
+  "collectionName": "glossary_entries",
+  "info": {
+    "singularName": "glossary-entry",
+    "pluralName": "glossary-entries",
+    "displayName": "Glossary Entry",
+    "description": "Terminology overrides for translations"
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "attributes": {
+    "term": {
+      "type": "string",
+      "required": true
+    },
+    "language": {
+      "type": "enumeration",
+      "enum": [
+        "ta",
+        "en",
+        "hi",
+        "te",
+        "ml"
+      ],
+      "default": "ta",
+      "required": true
+    },
+    "translation": {
+      "type": "string",
+      "required": true
+    },
+    "context": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "text"
+    },
+    "categories": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::category.category"
+    }
+  }
+}
