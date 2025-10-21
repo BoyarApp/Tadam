@@ -17,5 +17,13 @@ export default {
         auth: false,
       },
     },
+    {
+      method: 'GET',
+      path: '/phonepe/status/:merchantTransactionId',
+      handler: 'phonepe.status',
+      config: {
+        policies: ['global::ensure-authenticated'],
+      },
+    },
   ],
 };

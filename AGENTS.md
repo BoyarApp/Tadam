@@ -15,7 +15,7 @@ This document defines how automated contributors (Codex, ChatGPT, etc.) should w
 1. **Create a branch** using the naming convention `feature/<area>-<short-description>` or `fix/<area>-<issue-id>`.
 2. **Sync with main** before starting: `git pull origin main`.
 3. **Implement** following conventions (see below). If you need to adjust architecture or libraries, open a proposal in Issues first.
-4. **Tests & lint** – run workspace-specific commands (`pnpm --filter frontend lint`, `pnpm --filter frontend test:unit`, `pnpm --filter cms test`, etc.).
+4. **Tests & lint** – run workspace-specific commands (`pnpm --filter frontend lint`, `pnpm --filter frontend test:unit`, `pnpm --filter cms test`, etc.). Execute `pnpm --filter frontend exec nuxt prepare` first if `.nuxt` was cleaned.
 5. **Update docs** if APIs/configs change.
 6. **Commit** with conventional message (`feat:`, `fix:`, `chore:`, `docs:`).
 7. **Open PR** with summary, testing evidence, migration notes, and security/privacy considerations.
@@ -49,7 +49,6 @@ This document defines how automated contributors (Codex, ChatGPT, etc.) should w
 
 ## AI-Specific Responsibilities
 
-- Assume **no network access** unless explicitly allowed.
 - Provide reasoning in PR descriptions for non-trivial decisions.
 - Highlight trade-offs, edge cases, and follow-up tasks.
 - If you encounter conflicting instructions, escalate via issue before proceeding.
@@ -58,7 +57,7 @@ This document defines how automated contributors (Codex, ChatGPT, etc.) should w
 ## Sensitive Areas
 
 - **Authentication & OAuth**: keep flows aligned with Strapi providers; do not modify session handling without review.
-- **Payments & Ads**: respect ledger invariants, Razorpay webhooks, and `/ads/serve` business rules.
+- **Payments & Ads**: respect ledger invariants, PhonePe webhooks/status checks, and `/ads/serve` business rules.
 - **AI Assist Services**: suggestions must remain reversible and auditable.
 - **Multi-language support**: use glossary overrides, avoid hardcoded translations.
 

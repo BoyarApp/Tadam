@@ -93,6 +93,7 @@ export default ({ strapi }) => ({
         amount,
         status: 'pending',
         user: userId,
+        external_reference: merchantTransactionId,
         metadata: {
           merchantTransactionId,
           paymentPageUrl,
@@ -113,29 +114,36 @@ export default ({ strapi }) => ({
       return { success: false };
     }
 
-    const config = getConfig();
     const merchantTransactionId = payload.merchantTransactionId;
     const status = (await this.fetchStatus(merchantTransactionId)) as any;
+    const syncSuccess = await this.syncFromStatus(merchantTransactionId, status);
 
+    return {
+      success: syncSuccess,
+      status,
+    };
+  },
+
+  async syncFromStatus(merchantTransactionId: string, status: any) {
     if (!status?.success) {
       strapi.log.warn('PhonePe status lookup failed', status);
       await this.updateLedgerStatus(merchantTransactionId, 'failed', status);
-      return { success: false };
+      return false;
     }
 
     const state = status?.data?.state;
     if (state === 'COMPLETED') {
       await this.updateLedgerStatus(merchantTransactionId, 'completed', status);
       await this.activateMembership(merchantTransactionId);
-      return { success: true };
+      return true;
     }
 
     if (state === 'FAILED' || state === 'DECLINED') {
       await this.updateLedgerStatus(merchantTransactionId, 'failed', status);
-      return { success: false };
+      return false;
     }
 
-    return { success: true };
+    return true;
   },
 
   async fetchStatus(merchantTransactionId: string) {
@@ -157,7 +165,7 @@ export default ({ strapi }) => ({
 
   async updateLedgerStatus(merchantTransactionId: string, status: 'completed' | 'failed', metadata: any) {
     const entries = await strapi.entityService.findMany('api::payments-ledger.payments-ledger', {
-      filters: { metadata: { merchantTransactionId } },
+      filters: { external_reference: merchantTransactionId },
       limit: 1,
     });
 
@@ -181,7 +189,7 @@ export default ({ strapi }) => ({
 
   async activateMembership(merchantTransactionId: string) {
     const entries = await strapi.entityService.findMany('api::payments-ledger.payments-ledger', {
-      filters: { metadata: { merchantTransactionId } },
+      filters: { external_reference: merchantTransactionId },
       populate: ['user'],
       limit: 1,
     });

@@ -3,11 +3,13 @@ import { defineStore } from 'pinia';
 export type DistrictPreference = {
   id: string;
   name: string;
+  slug?: string;
 };
 
 export type CategoryPreference = {
   id: string;
   name: string;
+  slug?: string;
 };
 
 type ThemeMode = 'light' | 'dark';

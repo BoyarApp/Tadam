@@ -50,7 +50,12 @@ describe('PhonePe service', () => {
     const result = await service.createOrder({ amount: 299, userId: 42 });
 
     expect(result.paymentPageUrl).toContain('phonepe');
-    expect(createMock).toHaveBeenCalledWith('api::payments-ledger.payments-ledger', expect.any(Object));
+    expect(createMock).toHaveBeenCalledWith(
+      'api::payments-ledger.payments-ledger',
+      expect.objectContaining({
+        data: expect.objectContaining({ external_reference: expect.any(String) }),
+      }),
+    );
     expect((global.fetch as jest.Mock).mock.calls[0][0]).toContain('/pg/v1/pay');
   });
 
@@ -58,8 +63,8 @@ describe('PhonePe service', () => {
     const updateMock = jest.fn();
     const findManyMock = jest
       .fn()
-      .mockResolvedValueOnce([{ id: 5, metadata: { merchantTransactionId: 'TX123' } }])
-      .mockResolvedValueOnce([{ id: 5, metadata: { merchantTransactionId: 'TX123' }, user: { id: 77 } }]);
+      .mockResolvedValueOnce([{ id: 5, external_reference: 'TX123' }])
+      .mockResolvedValueOnce([{ id: 5, external_reference: 'TX123', user: { id: 77 } }]);
 
     const serviceInstance = phonepeServiceFactory({
       strapi: {
@@ -82,6 +87,7 @@ describe('PhonePe service', () => {
     const response = await serviceInstance.handleWebhook({ merchantTransactionId: 'TX123' });
 
     expect(response.success).toBe(true);
+    expect(response.status?.data?.state).toBe('COMPLETED');
     expect(updateMock).toHaveBeenCalledWith(
       'api::payments-ledger.payments-ledger',
       5,

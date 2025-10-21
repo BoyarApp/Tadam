@@ -35,6 +35,9 @@
     "razorpay_txn_id": {
       "type": "string"
     },
+    "external_reference": {
+      "type": "string"
+    },
     "status": {
       "type": "enumeration",
       "enum": [

@@ -9,11 +9,11 @@ Deliver a Tamil-first news platform that is fast on low-end phones, builds trust
 | Layer        | Components                                                                                     |
 |--------------|------------------------------------------------------------------------------------------------|
 | Frontend     | Nuxt 3 SSR/PWA, Vuetify 3 (Nuxt module), Tailwind utilities, Workbox, Plausible analytics    |
-| Backend CMS  | Strapi v5, custom plugins (AI assists, ad decisioning, Razorpay integration, moderation)       |
+| Backend CMS  | Strapi v5, custom plugins (AI assists, ad decisioning, PhonePe integration, moderation)        |
 | Data         | PostgreSQL (primary store), Redis (session/cache/rate limit), Meilisearch (Tamil search)       |
 | Media        | Cloudflare R2/S3 (production), MinIO (local parity), image CDN for optimisation                |
 | Auth         | Strapi users-permissions with Google & Apple OAuth providers, optional email/password fallback |
-| Payments     | Razorpay for memberships and advertiser billing, ledger-backed accounting                      |
+| Payments     | PhonePe for memberships and advertiser billing (Razorpay optional), ledger-backed accounting   |
 | Infra        | Docker Compose (dev/prod parity), Vercel (frontend), Fly/Render (Strapi), Cloudflare edge      |
 
 ## Domain Models (Key Collections)
@@ -34,7 +34,9 @@ Deliver a Tamil-first news platform that is fast on low-end phones, builds trust
 - Personalised feeds (alerts, hot, My Mix, outside bubble) with “Why you see this”.
 - Editorial desk: manual curation with AI suggestions (translate, spell-check, entity tagging, style rewrite, fact extract).
 - Ad server: `/ads/serve` with targeting, pacing, frequency caps, blocker resilience.
-- Razorpay integration: memberships + advertiser billing, ledger reconciliation, GST invoices.
+- PhonePe integration: memberships + advertiser billing, ledger reconciliation, GST invoices (Razorpay optional later).
+- Analytics & monitoring: Plausible page analytics, Sentry error tracking, custom event hooks.
+- Feed API: `/feed` aggregates editor picks, trending stories, preference-matched articles, and national/international coverage.
 - Search: Meilisearch tuned for Tamil (ICU, transliteration, synonyms).
 - SEO/LLM readiness: structured data, News/Discover sitemaps, optional RSS/Atom.
 - UI stack: Vuetify 3 selected over Nuxt UI for its enterprise component coverage (data tables, form wizardry, admin dashboards) and Nuxt module support; Nuxt UI remains a future option for lightweight micro-sites if needed.
@@ -62,10 +64,10 @@ Deliver a Tamil-first news platform that is fast on low-end phones, builds trust
 - District picker overlay, category rail component, service worker with offline text cache and LQIP images.
 - Provide mock API layer mapping to planned Strapi endpoints.
 
-**Sprint P0.4 – Payments & Analytics**
-- Integrate Razorpay membership flow (Google/Apple OAuth + email fallback).
-- Implement membership status transitions (active/grace/expired) and audit logs.
-- Add Plausible/PostHog, Sentry, basic alerting dashboards.
+- **Sprint P0.4 – Payments & Analytics**
+- Integrate PhonePe membership flow (checkout UI, webhook reconciliation, OAuth-ready).
+- Implement membership status transitions (active/grace/expired), ledger audit logs, and status polling endpoint.
+- Add Plausible analytics + Sentry error monitoring, wire dashboards.
 - Ensure Docker Compose stack builds and runs end-to-end (`docker compose up`).
 
 **Exit Criteria**
@@ -78,7 +80,7 @@ Deliver a Tamil-first news platform that is fast on low-end phones, builds trust
 
 **Sprint P1.1 – Ad Server MVP**
 - Build `/ads/serve` endpoint with targeting (district/category/device/festival), pacing, frequency caps (salted fingerprint), membership-aware enforcement.
-- Implement PaymentsLedger-backed budget handling, Razorpay webhook reconciliation, GST invoice storage.
+- Implement PaymentsLedger-backed budget handling, PhonePe webhook reconciliation, GST invoice storage.
 - Log impressions/clicks via Redis streams -> Postgres batches.
 
 **Sprint P1.2 – Advertiser & Reporting UI**

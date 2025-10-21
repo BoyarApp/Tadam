@@ -6,7 +6,7 @@ Tamil-first, mobile-optimised news network delivering trusted local, national, a
 
 - **Lightning-fast reader UX**: Nuxt 3 PWA, offline cache tuned for low-end Android devices, Mukta Malar typography, multi-district personalisation with “outside bubble” injects.
 - **Editorial control with AI assists**: Desk-curated stories enhanced by translation, spell-check, and entity tagging suggestions—never auto-publish.
-- **Ad & membership revenue**: First-party ad server with Razorpay billing, ad-free supporter memberships enforced server-side.
+- **Ad & membership revenue**: First-party ad server with PhonePe (initial) billing, ad-free supporter memberships enforced server-side.
 - **Compliance and trust**: DPDP-ready consent logs, auditable AI suggestions, clear “Why you see this” explanations, structured data for SEO and LLM discoverability.
 
 ## Stack Overview
@@ -14,7 +14,7 @@ Tamil-first, mobile-optimised news network delivering trusted local, national, a
 | Tier        | Technology                                                                               |
 |-------------|-------------------------------------------------------------------------------------------|
 | Frontend    | Nuxt 3 (Vue) + Vuetify 3 (Nuxt module), Tailwind utilities (PrimeFlex optional), Workbox, Plausible |
-| Backend CMS | Strapi v5 with custom plugins for AI assists, ads, Razorpay, moderation                   |
+| Backend CMS | Strapi v5 with custom plugins for AI assists, ads, PhonePe billing, moderation            |
 | Data        | PostgreSQL, Redis (session/cache), Meilisearch (Tamil search), Cloudflare R2/S3 media     |
 | Infra       | Docker Compose (local ≈ production), Vercel (Nuxt), Fly/Render (Strapi), Cloudflare edge |
 
@@ -51,7 +51,8 @@ Populate secrets:
 - `NUXT_PUBLIC_API_URL`, `NUXT_PUBLIC_MEILISEARCH_URL`
 - `STRAPI_ADMIN_JWT_SECRET`, `APP_KEYS`, `API_TOKEN_SALT`
 - `DATABASE_URL` (Postgres), `REDIS_URL`, `MEILISEARCH_MASTER_KEY`
-- `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`
+- PhonePe: `PHONEPE_MERCHANT_ID`, `PHONEPE_SALT_KEY`, `PHONEPE_SALT_INDEX`, `PHONEPE_BASE_URL`, `PHONEPE_REDIRECT_URL`, `PHONEPE_CALLBACK_URL`
+- (Optional) Razorpay: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`
 - `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`
 
 Use separate credentials per environment. Never commit secrets.
@@ -98,6 +99,49 @@ Use separate credentials per environment. Never commit secrets.
    - Frontend: `pnpm --filter frontend lint`, `pnpm --filter frontend typecheck`, `pnpm --filter frontend test:unit`.
    - CMS: `pnpm --filter cms test` for plugin/unit tests; use `test:watch` for rapid feedback.
    - Integration tests (Playwright) run via `pnpm test:e2e` against the compose stack.
+   - If `.nuxt` has been cleaned, run `pnpm --filter frontend exec nuxt prepare` before executing Vitest.
+
+### PhonePe Sandbox Setup
+
+1. Obtain test credentials from the PhonePe developer portal (merchant ID, salt key, salt index). Use the provided sandbox account during development: `PHONEPE_MERCHANT_ID`, `PHONEPE_SALT_KEY`, `PHONEPE_SALT_INDEX`.
+2. Configure environment variables in `cms/.env`:
+   ```env
+   PHONEPE_MERCHANT_ID=TEST-M23R1BQKNZR6J_25102
+   PHONEPE_SALT_KEY=MzlkYjk5NDktOWRkNC00NWRmLWFlMWYtZmFkNWI2YTQyNzhh
+   PHONEPE_SALT_INDEX=1
+   PHONEPE_BASE_URL=https://api-preprod.phonepe.com/apis/hermes
+   PHONEPE_CALLBACK_URL=http://localhost:1337/api/phonepe/webhook
+   PHONEPE_REDIRECT_URL=http://localhost:3000/account/membership/success
+   ```
+3. Restart the Strapi container after updating secrets: `docker compose up --build cms`.
+4. Trigger a test order via `POST /api/phonepe/order` (authenticated request) and confirm that the ledger entry is created as `pending`.
+5. Use the PhonePe staging dashboard or webhook replay to send a mocked completion payload; the webhook updates membership status and marks the ledger entry as `completed`.
+
+### Analytics & Monitoring (optional)
+
+1. Copy `frontend/.env.example` to `.env` and set:
+   ```env
+   NUXT_PUBLIC_PLAUSIBLE_DOMAIN=news.tadam.in
+   NUXT_PUBLIC_PLAUSIBLE_SCRIPT_URL=https://plausible.io/js/script.js
+   NUXT_PUBLIC_SENTRY_DSN=https://examplePublicKey@o0.ingest.sentry.io/0
+   NUXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE=0.1
+   ```
+2. Plausible loads client-side via `plugins/analytics.client.ts`; verify page views appear in your Plausible dashboard after running `pnpm --filter frontend dev`.
+3. Sentry initialises automatically when a DSN is present. Trigger a test error (`throw new Error('test')` in the console) to confirm ingestion.
+4. Disable analytics locally by clearing the environment variables.
+
+### Membership Flow (frontend)
+
+1. Run the stack (`docker compose up`) and start the frontend (`pnpm --filter frontend dev`).
+2. Sign in (or use an authenticated session) and visit `http://localhost:3000/account/membership`.
+3. Click **Start secure payment**. The app calls `POST /api/phonepe/order`, stores the transaction ID locally, and redirects to the PhonePe sandbox page.
+4. After completing or cancelling the payment, PhonePe redirects to `/account/membership/success`. Use **Refresh status** to hit `GET /api/phonepe/status/:merchantTransactionId` and confirm ledger + membership updates.
+
+### Feed API
+
+- `GET /feed?categories=politics,cinema&districts=chennai,madurai`
+  - Returns an array of sections (`alerts`, `hot`, `my-mix`, `outside`) with deduplicated article cards.
+  - When no parameters are provided, users see editor picks, trending stories, and national/international coverage.
 
 ## Authentication Strategy
 

@@ -4,13 +4,17 @@ export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
   devtools: { enabled: true },
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt', '@vite-pwa/nuxt'],
-  css: ['@/assets/styles/main.scss', '@mdi/font/css/materialdesignicons.min.css'],
+  css: ['~/assets/styles/main.scss', '@mdi/font/css/materialdesignicons.min.css'],
   components: [{ path: '~/components', pathPrefix: false }],
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_URL ?? 'http://localhost:1337',
       imageCdn: process.env.NUXT_PUBLIC_MEDIA_URL ?? '',
       searchBase: process.env.NUXT_PUBLIC_MEILISEARCH_URL ?? 'http://localhost:7700',
+      plausibleDomain: process.env.NUXT_PUBLIC_PLAUSIBLE_DOMAIN ?? '',
+      plausibleScriptUrl: process.env.NUXT_PUBLIC_PLAUSIBLE_SCRIPT_URL ?? '',
+      sentryDsn: process.env.NUXT_PUBLIC_SENTRY_DSN ?? '',
+      sentryTracesSampleRate: process.env.NUXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE ?? '0.1',
     },
   },
   app: {
@@ -44,7 +48,7 @@ export default defineNuxtConfig({
     },
   },
   tailwindcss: {
-    cssPath: false,
+    cssPath: '~/assets/styles/main.scss',
     configPath: 'tailwind.config.ts',
     viewer: false,
   },

@@ -43,4 +43,41 @@ export default ({ strapi }) => ({
       };
     }
   },
+
+  async status(ctx) {
+    const { merchantTransactionId } = ctx.params ?? {};
+    const userId = ctx.state.user?.id;
+
+    if (!userId) {
+      return ctx.unauthorized('Authentication required.');
+    }
+
+    if (!merchantTransactionId) {
+      return ctx.badRequest('Missing transaction reference.');
+    }
+
+    const entries = await strapi.entityService.findMany('api::payments-ledger.payments-ledger', {
+      filters: { external_reference: merchantTransactionId },
+      populate: ['user'],
+      limit: 1,
+    });
+
+    if (!entries || entries.length === 0) {
+      return ctx.notFound('Transaction not found.');
+    }
+
+    const entry = entries[0];
+    if (entry.user?.id && entry.user.id !== userId) {
+      return ctx.forbidden('You do not have access to this transaction.');
+    }
+
+    const service = strapi.plugin('phonepe').service('phonepe');
+    const status = await service.fetchStatus(merchantTransactionId);
+    await service.syncFromStatus(merchantTransactionId, status);
+
+    ctx.body = {
+      success: true,
+      status,
+    };
+  },
 });

@@ -40,7 +40,7 @@ NUXT_PUBLIC_MEDIA_URL=http://localhost:9000/tadam-media
 - `components/article/*` – article layout primitives.
 - `composables/useFeed.ts` – mocked feed API (replace with real API integration later).
 - `stores/preferences.ts` – persisted district/category/theme state (max 3 districts).
-- `app/assets/styles/main.scss` – Mukta Malar font imports, Tailwind directives, Vuetify base styles.
+- `assets/styles/main.scss` – Mukta Malar font imports, Tailwind directives, Vuetify base styles.
 
 ## Testing & Quality
 

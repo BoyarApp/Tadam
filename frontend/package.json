@@ -19,6 +19,7 @@
   "dependencies": {
     "@fontsource/mukta-malar": "^5.2.7",
     "@mdi/font": "^7.4.47",
+    "@sentry/vue": "^10.20.0",
     "@vueuse/core": "^13.9.0",
     "luxon": "^3.7.2",
     "nuxt": "^4.1.3",
