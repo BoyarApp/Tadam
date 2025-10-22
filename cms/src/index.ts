@@ -20,7 +20,8 @@ export default {
    * run jobs, or perform some special logic.
    */
   async bootstrap({ strapi }) {
-    await seedInitialData(strapi);
-    await seedRoles(strapi);
+    // Temporarily disabled to allow initial startup
+    // await seedInitialData(strapi);
+    // await seedRoles(strapi);
   },
 };
