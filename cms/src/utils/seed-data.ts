@@ -65,22 +65,27 @@ const districts = [
   'Virudhunagar'
 ];
 
-const glossaryEntries = [
+const glossaryEntries: Array<{
+  term: string;
+  language: 'en' | 'ta' | 'hi' | 'te' | 'ml';
+  translation: string;
+  context: string;
+}> = [
   {
     term: 'Chief Minister',
-    language: 'en',
+    language: 'en' as const,
     translation: 'முதல்வர்',
     context: 'politics'
   },
   {
     term: 'Budget',
-    language: 'en',
+    language: 'en' as const,
     translation: 'நிதிநிலை விவரம்',
     context: 'economy'
   },
   {
     term: 'GST',
-    language: 'en',
+    language: 'en' as const,
     translation: 'சரக்கு மற்றும் சேவை வரி',
     context: 'business'
   }
@@ -93,64 +98,84 @@ export const seedInitialData = async (strapi: Core.Strapi) => {
 };
 
 const seedCategories = async (strapi: Core.Strapi) => {
-  const categoryService = strapi.entityService;
-
   for (const category of categories) {
     const slug = toSlug(category.name);
-    const existing = await categoryService.findMany('api::category.category', {
-      filters: { slug },
-      limit: 1
-    });
 
-    if (existing.length === 0) {
-      await categoryService.create('api::category.category', {
-        data: {
-          name: category.name,
-          slug,
-          description: category.description
-        }
+    try {
+      // Use db.query API to bypass lifecycle hooks
+      const existing = await strapi.db.query('api::category.category').findOne({
+        where: { slug },
       });
+
+      if (!existing) {
+        await strapi.db.query('api::category.category').create({
+          data: {
+            name: category.name,
+            slug,
+            description: category.description,
+          }
+        });
+        strapi.log.info(`Seeded category: ${category.name}`);
+      }
+    } catch (error) {
+      // Catch unique constraint violations silently
+      if (!error.message?.includes('unique') && !error.message?.includes('duplicate')) {
+        strapi.log.warn(`Could not seed category ${category.name}:`, error.message);
+      }
     }
   }
 };
 
 const seedDistricts = async (strapi: Core.Strapi) => {
-  const districtService = strapi.entityService;
-
   for (const name of districts) {
     const slug = toSlug(name);
-    const existing = await districtService.findMany('api::district.district', {
-      filters: { slug },
-      limit: 1
-    });
 
-    if (existing.length === 0) {
-      await districtService.create('api::district.district', {
-        data: {
-          name,
-          slug
-        }
+    try {
+      // Use db.query API to bypass lifecycle hooks
+      const existing = await strapi.db.query('api::district.district').findOne({
+        where: { slug },
       });
+
+      if (!existing) {
+        await strapi.db.query('api::district.district').create({
+          data: {
+            name,
+            slug,
+          }
+        });
+        strapi.log.info(`Seeded district: ${name}`);
+      }
+    } catch (error) {
+      // Catch unique constraint violations silently
+      if (!error.message?.includes('unique') && !error.message?.includes('duplicate')) {
+        strapi.log.warn(`Could not seed district ${name}:`, error.message);
+      }
     }
   }
 };
 
 const seedGlossary = async (strapi: Core.Strapi) => {
-  const glossaryService = strapi.entityService;
-
   for (const glossaryEntry of glossaryEntries) {
-    const existing = await glossaryService.findMany('api::glossary-entry.glossary-entry', {
-      filters: {
-        term: glossaryEntry.term,
-        language: glossaryEntry.language
-      },
-      limit: 1
-    });
-
-    if (existing.length === 0) {
-      await glossaryService.create('api::glossary-entry.glossary-entry', {
-        data: glossaryEntry
+    try {
+      // Use db.query API to bypass lifecycle hooks
+      const existing = await strapi.db.query('api::glossary-entry.glossary-entry').findOne({
+        where: {
+          term: glossaryEntry.term,
+          language: glossaryEntry.language,
+        },
       });
+
+      if (!existing) {
+        await strapi.db.query('api::glossary-entry.glossary-entry').create({
+          data: glossaryEntry,
+        });
+        strapi.log.info(`Seeded glossary: ${glossaryEntry.term}`);
+      }
+    } catch (error) {
+      // Catch unique constraint violations silently
+      if (!error.message?.includes('unique') && !error.message?.includes('duplicate')) {
+        strapi.log.warn(`Could not seed glossary ${glossaryEntry.term}:`, error.message);
+      }
     }
   }
 };

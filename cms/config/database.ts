@@ -3,6 +3,8 @@ import path from 'path';
 export default ({ env }) => {
   const client = env('DATABASE_CLIENT', 'sqlite');
 
+  const databaseUrl = env('DATABASE_URL');
+
   const connections = {
     mysql: {
       connection: {
@@ -24,7 +26,7 @@ export default ({ env }) => {
     },
     postgres: {
       connection: {
-        connectionString: env('DATABASE_URL'),
+        ...(databaseUrl ? { connectionString: databaseUrl } : {}),
         host: env('DATABASE_HOST', 'localhost'),
         port: env.int('DATABASE_PORT', 5432),
         database: env('DATABASE_NAME', 'strapi'),
