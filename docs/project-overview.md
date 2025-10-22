@@ -33,6 +33,7 @@ Deliver a Tamil-first news platform that is fast on low-end phones, builds trust
 - Nuxt PWA with offline cache, LQIP images, service worker retries, Mukta Malar typography.
 - Personalised feeds (alerts, hot, My Mix, outside bubble) with “Why you see this”.
 - Editorial desk: manual curation with AI suggestions (translate, spell-check, entity tagging, style rewrite, fact extract).
+  - Workbench prototype includes fact box/source managers, media tracker, quality heuristics, and workflow controls tied to Strapi endpoints.
 - Ad server: `/ads/serve` with targeting, pacing, frequency caps, blocker resilience.
 - PhonePe integration: memberships + advertiser billing, ledger reconciliation, GST invoices (Razorpay optional later).
 - Analytics & monitoring: Plausible page analytics, Sentry error tracking, custom event hooks.
@@ -55,11 +56,10 @@ Deliver a Tamil-first news platform that is fast on low-end phones, builds trust
 - Configure JWT/auth secrets, rate limiting, admin panel customisation.
 
 **Sprint P0.2 – Editorial Desk Prototype**
-- Scaffold `cms/src/plugins/editorial-workbench` (backend) with AI assist endpoints and admin placeholders.
-- Build rich-text editor with source URLs, fact box, media management, entity tagging UI.
-- Integrate AI assists (translate EN↔TA, spell/grammar, entity suggestions) as async services logging to `AIAssist`.
-- Implement Draft → Review → Publish workflow, version history via `ArticleVersion`, and seed editorial roles/permissions.
-- Add plagiarism/toxicity stub checks; ensure editors must approve before publish.
+- Scaffolded `cms/src/plugins/editorial-workbench` with translate/spellcheck/entity endpoints logging to `ai-assist-log`.
+- Added article workflow actions (`submit`, `approve`, `publish`, `request-changes`) with role gating, history capture, and version snapshots.
+- Built Nuxt workbench page featuring rich-text editor, AI assists, source/fact box managers, media tracker, entity tagging UI, and workflow timeline.
+- Introduced local quality stubs (word count, readability, toxicity hints) ahead of full compliance services.
 
 **Sprint P0.3 – Nuxt Shell & Personalisation Basics**
 - Scaffold Nuxt 3 + Vuetify app (`frontend/`), set up theming, fonts, layout.

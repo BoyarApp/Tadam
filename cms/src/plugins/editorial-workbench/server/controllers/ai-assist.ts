@@ -4,7 +4,14 @@ import { sanitizeEntityInput } from '../utils/sanitize';
 const MAX_TEXT_LENGTH = 5000;
 
 const ensurePayload = (ctx: Context) => {
-  const { text, language, targetLanguage } = ctx.request.body ?? {};
+  const {
+    text,
+    language,
+    targetLanguage,
+    articleId,
+    submissionId,
+    metadata,
+  } = ctx.request.body ?? {};
 
   if (typeof text !== 'string' || !text.trim()) {
     return ctx.badRequest('Text is required for AI assist operations.');
@@ -14,7 +21,30 @@ const ensurePayload = (ctx: Context) => {
     return ctx.badRequest(`Text length exceeds ${MAX_TEXT_LENGTH} characters.`);
   }
 
-  return { text, language, targetLanguage };
+  const parseRelationId = (value: unknown) => {
+    if (typeof value === 'number' && Number.isInteger(value)) {
+      return value;
+    }
+
+    if (typeof value === 'string') {
+      const parsed = Number.parseInt(value, 10);
+      if (!Number.isNaN(parsed)) {
+        return parsed;
+      }
+    }
+
+    return undefined;
+  };
+
+  return {
+    text: text.trim(),
+    language,
+    targetLanguage,
+    articleId: parseRelationId(articleId),
+    submissionId: parseRelationId(submissionId),
+    metadata:
+      typeof metadata === 'object' && metadata !== null ? (metadata as Record<string, unknown>) : undefined,
+  };
 };
 
 export default ({ strapi }) => ({
@@ -30,6 +60,9 @@ export default ({ strapi }) => ({
         sourceLanguage: payload.language,
         targetLanguage: payload.targetLanguage,
         user: ctx.state.user,
+        articleId: payload.articleId,
+        submissionId: payload.submissionId,
+        metadata: payload.metadata,
       });
 
     ctx.body = sanitizeEntityInput(result);
@@ -46,6 +79,9 @@ export default ({ strapi }) => ({
         text: payload.text,
         language: payload.language,
         user: ctx.state.user,
+        articleId: payload.articleId,
+        submissionId: payload.submissionId,
+        metadata: payload.metadata,
       });
 
     ctx.body = sanitizeEntityInput(result);
@@ -62,6 +98,9 @@ export default ({ strapi }) => ({
         text: payload.text,
         language: payload.language,
         user: ctx.state.user,
+        articleId: payload.articleId,
+        submissionId: payload.submissionId,
+        metadata: payload.metadata,
       });
 
     ctx.body = sanitizeEntityInput(result);
