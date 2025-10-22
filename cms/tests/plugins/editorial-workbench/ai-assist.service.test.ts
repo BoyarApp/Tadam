@@ -1,7 +1,7 @@
 import aiAssistFactory from '../../../src/plugins/editorial-workbench/server/services/ai-assist';
 
 const buildStrapiMock = () => {
-  const create = jest.fn();
+  const create = jest.fn().mockResolvedValue({ id: 42 });
   const logWarn = jest.fn();
 
   const strapi = {
@@ -27,11 +27,13 @@ describe('editorial-workbench ai-assist service', () => {
       sourceLanguage: 'ta',
       targetLanguage: 'en',
       user: { id: 1 },
+      articleId: 9,
     });
 
     expect(result).toMatchObject({
       type: 'translate',
       metadata: expect.objectContaining({ targetLanguage: 'en' }),
+      logEntryId: 42,
     });
 
     expect(create).toHaveBeenCalledWith(
@@ -40,6 +42,10 @@ describe('editorial-workbench ai-assist service', () => {
         data: expect.objectContaining({
           operation_type: 'translate',
           editor: 1,
+          article: 9,
+          metadata: expect.objectContaining({
+            targetLanguage: 'en',
+          }),
         }),
       }),
     );
@@ -56,8 +62,10 @@ describe('editorial-workbench ai-assist service', () => {
 
     expect(result).toMatchObject({
       type: 'entity_tag',
-      entities: [],
+      entities: expect.any(Array),
+      logEntryId: 42,
     });
+    expect(result.entities.length).toBeGreaterThan(0);
 
     expect(create).toHaveBeenCalledWith(
       'api::ai-assist-log.ai-assist-log',
@@ -65,6 +73,46 @@ describe('editorial-workbench ai-assist service', () => {
         data: expect.objectContaining({
           operation_type: 'entity_tag',
           editor: 2,
+          metadata: expect.objectContaining({
+            totalEntities: expect.any(Number),
+          }),
+        }),
+      }),
+    );
+  });
+
+  it('returns spellcheck suggestions and logs metadata', async () => {
+    const { service, create } = buildStrapiMock();
+
+    const result = await service.spellcheck({
+      text: 'Test  text...',
+      language: 'en',
+      user: null,
+      submissionId: 4,
+    });
+
+    expect(result).toMatchObject({
+      type: 'spell_check',
+      metadata: expect.objectContaining({
+        language: 'en',
+        totalSuggestions: 2,
+      }),
+      logEntryId: 42,
+    });
+    expect(result.suggestions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ reason: 'Extra space detected' }),
+        expect.objectContaining({ reason: 'Ellipsis should use a single glyph' }),
+      ]),
+    );
+
+    expect(create).toHaveBeenCalledWith(
+      'api::ai-assist-log.ai-assist-log',
+      expect.objectContaining({
+        data: expect.objectContaining({
+          operation_type: 'spell_check',
+          submission: 4,
+          metadata: expect.objectContaining({ language: 'en' }),
         }),
       }),
     );

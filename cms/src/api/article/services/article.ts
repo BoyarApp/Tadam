@@ -9,6 +9,16 @@ export const STATUS_TRANSITIONS: Record<string, string[]> = {
   published: ['published', 'review'],
 };
 
+const WORKFLOW_HISTORY_LIMIT = 25;
+
+type WorkflowTransitionOptions = {
+  actor?: { id?: number | null; role?: { type?: string | null } | null } | null;
+  note?: string | null;
+  metadata?: Record<string, unknown>;
+  assignEditor?: boolean;
+  clearEditor?: boolean;
+};
+
 const getRequestUser = (strapi: Core.Strapi) =>
   strapi.requestContext.get()?.state?.user ?? null;
 
@@ -95,6 +105,103 @@ export default factories.createCoreService('api::article.article', ({ strapi }) 
 
     await this.createVersion(updated.id, changeType, sanitizeSnapshot(updated));
     return updated;
+  },
+
+  async transitionWorkflow(
+    articleId: number,
+    nextStatus: 'draft' | 'review' | 'approved' | 'published',
+    options: WorkflowTransitionOptions = {},
+  ) {
+    if (!articleId || Number.isNaN(articleId)) {
+      throw new errors.ValidationError('Valid article id is required for workflow transition.');
+    }
+
+    const existing = await (this as any).findOne(articleId, {});
+
+    if (!existing) {
+      throw new errors.NotFoundError('Article not found.');
+    }
+
+    const actorId = options.actor?.id ?? null;
+    const actorRole = options.actor?.role?.type ?? null;
+    const now = new Date().toISOString();
+
+    const currentMeta =
+      typeof existing.meta === 'object' && existing.meta !== null ? { ...existing.meta } : {};
+
+    const workflowMeta =
+      typeof currentMeta.workflow === 'object' && currentMeta.workflow !== null
+        ? { ...currentMeta.workflow }
+        : {};
+
+    const history = Array.isArray(workflowMeta.history)
+      ? [...workflowMeta.history]
+      : [];
+
+    const historyEntry: Record<string, unknown> = {
+      toStatus: nextStatus,
+      at: now,
+    };
+
+    if (actorId) {
+      historyEntry.actor = actorId;
+    }
+
+    if (actorRole) {
+      historyEntry.actorRole = actorRole;
+    }
+
+    if (options.note) {
+      historyEntry.note = options.note;
+    }
+
+    if (options.metadata && Object.keys(options.metadata).length > 0) {
+      historyEntry.metadata = options.metadata;
+    }
+
+    history.push(historyEntry);
+
+    const trimmedHistory = history.slice(-WORKFLOW_HISTORY_LIMIT);
+
+    const updatedWorkflowMeta = {
+      ...workflowMeta,
+      history: trimmedHistory,
+      lastStatus: nextStatus,
+      lastActionAt: now,
+      lastActionBy: actorId,
+      lastActionRole: actorRole,
+    };
+
+    if (options.note) {
+      updatedWorkflowMeta.lastNote = options.note;
+    }
+
+    if (options.metadata && Object.keys(options.metadata).length > 0) {
+      updatedWorkflowMeta.lastMetadata = options.metadata;
+    }
+
+    const updatedMeta = {
+      ...currentMeta,
+      workflow: updatedWorkflowMeta,
+    };
+
+    const data: Record<string, unknown> = {
+      status: nextStatus,
+      meta: updatedMeta,
+    };
+
+    if (options.assignEditor && actorId) {
+      data.editor = actorId;
+    }
+
+    if (options.clearEditor) {
+      data.editor = null;
+    }
+
+    return this.update({
+      where: { id: articleId },
+      data,
+    });
   },
 
   async createVersion(
