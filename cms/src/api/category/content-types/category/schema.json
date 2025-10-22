@@ -66,6 +66,12 @@
       "relation": "manyToMany",
       "target": "api::ad-campaign.ad-campaign",
       "mappedBy": "target_categories"
+    },
+    "followers": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "mappedBy": "categories"
     }
   }
 }

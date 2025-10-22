@@ -116,6 +116,7 @@ Use separate credentials per environment. Never commit secrets.
 3. Restart the Strapi container after updating secrets: `docker compose up --build cms`.
 4. Trigger a test order via `POST /api/phonepe/order` (authenticated request) and confirm that the ledger entry is created as `pending`.
 5. Use the PhonePe staging dashboard or webhook replay to send a mocked completion payload; the webhook updates membership status and marks the ledger entry as `completed`.
+6. Renewal reminders run daily at 7 AM Asia/Kolkata via the Strapi cron task (`MEMBERSHIP_REMINDER_CRON` env overrides; set to `off` to disable).
 
 ### Analytics & Monitoring (optional)
 
@@ -136,12 +137,21 @@ Use separate credentials per environment. Never commit secrets.
 2. Sign in (or use an authenticated session) and visit `http://localhost:3000/account/membership`.
 3. Click **Start secure payment**. The app calls `POST /api/phonepe/order`, stores the transaction ID locally, and redirects to the PhonePe sandbox page.
 4. After completing or cancelling the payment, PhonePe redirects to `/account/membership/success`. Use **Refresh status** to hit `GET /api/phonepe/status/:merchantTransactionId` and confirm ledger + membership updates.
+5. Use the “Request cancellation / refund” form to queue a PhonePe refund against a completed transaction; the UI marks the account as grace until the refund succeeds.
 
 ### Feed API
 
 - `GET /feed?categories=politics,cinema&districts=chennai,madurai`
   - Returns an array of sections (`alerts`, `hot`, `my-mix`, `outside`) with deduplicated article cards.
   - When no parameters are provided, users see editor picks, trending stories, and national/international coverage.
+  - Redis-backed cache (set `REDIS_HOST`, `REDIS_PORT`, `FEED_CACHE_TTL`). Authenticated requests skip cache to ensure personalised freshness.
+
+### Account & Membership
+
+- `GET /account/profile` – authenticated; returns membership status, expiry, selected districts/categories.
+- `GET /account/ledger` – authenticated; returns recent payment ledger entries.
+- `POST /account/membership/cancel` – authenticated; queues a PhonePe refund request and moves the account into grace state.
+- Frontend pages (`/account/membership` and `/account/membership/success`) consume these endpoints, gate ad slots when `membershipStatus === 'active'`, and display payment history.
 
 ## Authentication Strategy
 

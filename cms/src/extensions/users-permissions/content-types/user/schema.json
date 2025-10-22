@@ -1,10 +1,11 @@
 {
   "collectionName": "up_users",
   "info": {
-    "displayName": "user",
+    "name": "user",
+    "description": "",
+    "displayName": "User",
     "singularName": "user",
-    "pluralName": "users",
-    "description": ""
+    "pluralName": "users"
   },
   "options": {
     "draftAndPublish": false,
@@ -69,12 +70,14 @@
     "districts": {
       "type": "relation",
       "relation": "manyToMany",
-      "target": "api::district.district"
+      "target": "api::district.district",
+      "inversedBy": "followers"
     },
     "categories": {
       "type": "relation",
       "relation": "manyToMany",
-      "target": "api::category.category"
+      "target": "api::category.category",
+      "inversedBy": "followers"
     },
     "membership_status": {
       "type": "enumeration",
@@ -137,6 +140,15 @@
       "relation": "oneToMany",
       "target": "api::ad-campaign.ad-campaign",
       "mappedBy": "advertiser"
+    },
+    "membership_reminder_sent_at": {
+      "type": "datetime"
+    },
+    "membership_cancel_requested_at": {
+      "type": "datetime"
+    },
+    "membership_cancel_reason": {
+      "type": "text"
     }
   }
 }

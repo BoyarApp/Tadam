@@ -8,7 +8,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-tadam}
       POSTGRES_DB: ${POSTGRES_DB:-tadam}
     ports:
-      - ${POSTGRES_PORT:-5432}:5432
+      - ${POSTGRES_PORT:-5433}:5432
     volumes:
       - postgres-data:/var/lib/postgresql/data
     networks:
@@ -20,7 +20,7 @@ services:
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     restart: unless-stopped
     ports:
-      - ${REDIS_PORT:-6379}:6379
+      - ${REDIS_PORT:-6380}:6379
     networks:
       - tadam-net
 
@@ -47,8 +47,8 @@ services:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     ports:
-      - ${MINIO_PORT:-9000}:9000
-      - ${MINIO_CONSOLE_PORT:-9001}:9001
+      - ${MINIO_PORT:-9002}:9000
+      - ${MINIO_CONSOLE_PORT:-9003}:9001
     volumes:
       - minio-data:/data
     networks:
@@ -69,7 +69,7 @@ services:
       - ${STRAPI_PORT:-1337}:1337
     volumes:
       - ../cms:/app
-      - /app/node_modules
+      - cms-node-modules:/app/node_modules
     networks:
       - tadam-net
 
@@ -85,7 +85,7 @@ services:
       - ${NUXT_PORT:-3000}:3000
     volumes:
       - ../frontend:/usr/src/app
-      - /usr/src/app/node_modules
+      - frontend-node-modules:/usr/src/app/node_modules
     networks:
       - tadam-net
 
@@ -97,3 +97,5 @@ volumes:
   postgres-data:
   meili-data:
   minio-data:
+  cms-node-modules:
+  frontend-node-modules:

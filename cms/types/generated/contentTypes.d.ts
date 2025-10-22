@@ -738,6 +738,10 @@ export interface ApiCategoryCategory extends Struct.CollectionTypeSchema {
       'manyToMany',
       'api::festival.festival'
     >;
+    followers: Schema.Attribute.Relation<
+      'manyToMany',
+      'plugin::users-permissions.user'
+    >;
     glossary_entries: Schema.Attribute.Relation<
       'manyToMany',
       'api::glossary-entry.glossary-entry'
@@ -825,6 +829,10 @@ export interface ApiDistrictDistrict extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     entities: Schema.Attribute.Relation<'manyToMany', 'api::entity.entity'>;
     events: Schema.Attribute.Relation<'manyToMany', 'api::festival.festival'>;
+    followers: Schema.Attribute.Relation<
+      'manyToMany',
+      'plugin::users-permissions.user'
+    >;
     iso_code: Schema.Attribute.String & Schema.Attribute.Unique;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
@@ -1572,7 +1580,8 @@ export interface PluginUsersPermissionsUser
   collectionName: 'up_users';
   info: {
     description: '';
-    displayName: 'user';
+    displayName: 'User';
+    name: 'user';
     pluralName: 'users';
     singularName: 'user';
   };
@@ -1633,7 +1642,10 @@ export interface PluginUsersPermissionsUser
       'plugin::users-permissions.user'
     > &
       Schema.Attribute.Private;
+    membership_cancel_reason: Schema.Attribute.Text;
+    membership_cancel_requested_at: Schema.Attribute.DateTime;
     membership_expires_at: Schema.Attribute.DateTime;
+    membership_reminder_sent_at: Schema.Attribute.DateTime;
     membership_status: Schema.Attribute.Enumeration<
       ['free', 'active', 'grace', 'expired', 'cancelled']
     > &

@@ -12,6 +12,16 @@
       </div>
 
       <div class="flex items-center gap-2">
+        <VChip
+          v-if="isSupporter"
+          color="secondary"
+          variant="flat"
+          size="small"
+          prepend-icon="mdi-seal-variant"
+          :title="supporterTooltip"
+        >
+          Supporter
+        </VChip>
         <VBtn
           variant="text"
           color="primary"
@@ -22,10 +32,12 @@
           <span class="font-medium">Districts ({{ districtCount }})</span>
         </VBtn>
         <VBtn
+          v-if="!isSupporter"
           variant="text"
           color="secondary"
           class="hidden md:flex"
           prepend-icon="mdi-account-heart"
+          :to="'/account/membership'"
         >
           Support Us
         </VBtn>
@@ -40,13 +52,27 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{
+const props = defineProps<{
   districtCount: number;
   theme: 'light' | 'dark';
+  isSupporter: boolean;
+  membershipExpiresAt?: string | null;
 }>();
 
 defineEmits<{
   (event: 'toggle-theme'): void;
   (event: 'open-districts'): void;
 }>();
+
+const supporterTooltip = computed(() => {
+  if (!props.isSupporter) {
+    return 'Upgrade to a supporter pass for an ad-free experience.';
+  }
+  if (!props.membershipExpiresAt) {
+    return 'Supporter benefits active — thank you!';
+  }
+  const expiry = new Date(props.membershipExpiresAt);
+  const formatted = Number.isNaN(expiry.getTime()) ? props.membershipExpiresAt : expiry.toLocaleDateString();
+  return `Supporter benefits active until ${formatted}.`;
+});
 </script>
