@@ -124,31 +124,38 @@ const ROLE_DEFINITIONS: Array<{
 ];
 
 export const seedRoles = async (strapi: Core.Strapi) => {
-  const roleService = strapi.plugin('users-permissions').service('role');
+  try {
+    const roleService = strapi.plugin('users-permissions').service('role');
 
-  for (const role of ROLE_DEFINITIONS) {
-    const existing = await strapi.entityService.findMany(
-      'plugin::users-permissions.role',
-      {
-        filters: { type: role.type },
-        limit: 1,
-      },
-    );
+    for (const role of ROLE_DEFINITIONS) {
+      try {
+        // Use db.query API to bypass lifecycle hooks
+        const existing = await strapi.db.query('plugin::users-permissions.role').findOne({
+          where: { type: role.type },
+        });
 
-    if (existing.length === 0) {
-      await roleService.createRole({
-        name: role.name,
-        description: role.description,
-        type: role.type,
-        permissions: role.permissions,
-      });
-    } else {
-      await roleService.updateRole(existing[0].id, {
-        permissions: {
-          ...existing[0].permissions,
-          ...role.permissions,
-        },
-      });
+        if (!existing) {
+          await roleService.createRole({
+            name: role.name,
+            description: role.description,
+            type: role.type,
+            permissions: role.permissions,
+          });
+          strapi.log.info(`Seeded role: ${role.name}`);
+        } else {
+          await roleService.updateRole(existing.id, {
+            permissions: role.permissions,
+          });
+          strapi.log.info(`Updated role: ${role.name}`);
+        }
+      } catch (error) {
+        // Catch unique constraint violations silently
+        if (!error.message?.includes('unique') && !error.message?.includes('duplicate')) {
+          strapi.log.warn(`Could not seed role ${role.name}:`, error.message);
+        }
+      }
     }
+  } catch (error) {
+    strapi.log.warn('Role seeding failed:', error.message);
   }
 };

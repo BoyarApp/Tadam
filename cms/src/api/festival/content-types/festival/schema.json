@@ -38,7 +38,8 @@
     "categories": {
       "type": "relation",
       "relation": "manyToMany",
-      "target": "api::category.category"
+      "target": "api::category.category",
+      "inversedBy": "festivals"
     },
     "metadata": {
       "type": "json"

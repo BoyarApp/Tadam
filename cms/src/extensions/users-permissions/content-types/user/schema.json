@@ -1,7 +1,9 @@
 {
   "collectionName": "up_users",
   "info": {
-    "name": "user",
+    "displayName": "user",
+    "singularName": "user",
+    "pluralName": "users",
     "description": ""
   },
   "options": {
