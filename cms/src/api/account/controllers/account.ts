@@ -6,7 +6,7 @@ export default ({ strapi }) => ({
     }
 
     const user = await strapi.entityService.findOne('plugin::users-permissions.user', userId, {
-      populate: ['districts', 'categories'],
+      populate: ['districts', 'categories', 'role'],
     });
 
     const sanitized = await strapi.service('api::account.account').sanitizeUser(user, ctx);
@@ -20,6 +20,13 @@ export default ({ strapi }) => ({
       membershipReminderSentAt: sanitized.membership_reminder_sent_at ?? null,
       membershipCancelRequestedAt: sanitized.membership_cancel_requested_at ?? null,
       membershipCancelReason: sanitized.membership_cancel_reason ?? null,
+      role: sanitized.role
+        ? {
+            id: sanitized.role.id,
+            name: sanitized.role.name,
+            type: sanitized.role.type,
+          }
+        : null,
       districts: sanitized.districts?.map((district: any) => ({
         id: district.slug ?? district.id,
         name: district.name,

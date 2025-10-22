@@ -51,7 +51,7 @@ export const sanitizeSnapshot = (article: any) => {
 };
 
 export default factories.createCoreService('api::article.article', ({ strapi }) => ({
-  async create(params) {
+  async create(params: any) {
     const data = params.data ?? {};
     data.status = data.status ?? 'draft';
 
@@ -66,7 +66,7 @@ export default factories.createCoreService('api::article.article', ({ strapi }) 
     return created;
   },
 
-  async update(params) {
+  async update(params: any) {
     const articleId = params.where?.id;
     if (!articleId) {
       return super.update(params);

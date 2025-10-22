@@ -25,5 +25,13 @@ export default {
         policies: ['global::ensure-authenticated'],
       },
     },
+    {
+      method: 'POST',
+      path: '/quality/evaluate',
+      handler: 'ai-assist.quality',
+      config: {
+        policies: ['global::ensure-authenticated'],
+      },
+    },
   ],
 };

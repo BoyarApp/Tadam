@@ -8,9 +8,10 @@ The P0.2 sprint delivers the first-cut editorial tooling that keeps humans in co
 
 | Route | Method | Description | Notes |
 |-------|--------|-------------|-------|
-| `/editorial-workbench/ai/translate` | `POST` | Returns a stubbed Tamil↔English translation with confidence metadata. | Accepts `{ text, language, targetLanguage, articleId?, submissionId?, metadata? }`. |
-| `/editorial-workbench/ai/spellcheck` | `POST` | Detects repeated spaces, ellipsis misuse, and other quick wins. | Returns structured suggestions with offsets and reasons. |
-| `/editorial-workbench/ai/entity-suggest` | `POST` | Extracts probable keywords/entities from copy. | Simple heuristic until a proper NER service is wired. |
+| `/editorial-workbench/ai/translate` | `POST` | Calls the configured AI provider for Tamil↔English suggestions with fallback heuristics. | Accepts `{ text, language, targetLanguage, articleId?, submissionId?, metadata? }`. |
+| `/editorial-workbench/ai/spellcheck` | `POST` | Invokes provider spell/grammar checks and falls back to local spacing/ellipsis heuristics. | Returns structured suggestions with offsets and reasons. |
+| `/editorial-workbench/ai/entity-suggest` | `POST` | Uses provider NER suggestions when available, otherwise emits heuristic tokens. | Includes per-entity confidence and metadata. |
+| `/editorial-workbench/quality/evaluate` | `POST` | Sends copy to the compliance provider for toxicity/plagiarism heuristics with local fallback. | Response includes `summary`, `metrics`, `flags`, `metadata`, and `evaluatedAt`. |
 
 All assist responses are logged to `api::ai-assist-log.ai-assist-log` with:
 
@@ -21,6 +22,15 @@ All assist responses are logged to `api::ai-assist-log.ai-assist-log` with:
 - Editor id (from request context)
 
 Failures are swallowed to avoid blocking the UI; warnings are pushed to Strapi logs.
+
+### Provider Configuration
+
+Set the following environment variables (or `.env`) to point the plugin at real services:
+
+- `EDITORIAL_AI_BASE_URL` / `EDITORIAL_AI_API_KEY` / `EDITORIAL_AI_TIMEOUT_MS`
+- `EDITORIAL_COMPLIANCE_BASE_URL` / `EDITORIAL_COMPLIANCE_API_KEY` / `EDITORIAL_COMPLIANCE_TIMEOUT_MS`
+
+If a provider is unreachable or unset, the service falls back to the heuristic implementations and emits a warning.
 
 ### Workflow Helpers
 
@@ -43,7 +53,7 @@ All routes enforce `global::ensure-authenticated` and role gating (`author` for 
 
 ## Frontend: Nuxt Workbench Page
 
-Route: `/editorial/workbench` (no auth baked in yet; relies on Strapi session cookie when calling APIs).
+Route: `/editorial/workbench` (now wrapped in `editorial-auth` middleware; requires a valid Strapi session with `author`/`editor` role and redirects to `/login` when missing).
 
 ### Core Features
 
@@ -52,12 +62,12 @@ Route: `/editorial/workbench` (no auth baked in yet; relies on Strapi session co
 - **Fact Box Builder**: Creates fact entries with optional per-fact source URLs mirroring the `article.fact-entry` component.
 - **Media Manager**: Tracks hero image URL plus gallery/supporting assets (URL based stub until upload APIs land).
 - **Entity Tagging**: Shows AI suggestions, allows manual tagging, and emits the selected entity list.
-- **Quality Checks**: Local heuristics for word count, sentence length readability, suspicious phrasing, and a crude toxicity score to prompt human review.
+- **Quality Checks**: Server-driven evaluation (provider + fallback heuristics) for readability, toxicity, suspicious phrasing, and custom flags. Results refresh on content/language changes with optimistic loading states.
 - **Workflow Panel**: Triggers the new CMS endpoints, bubbles up success/error alerts, and displays a reverse-chronological timeline built from `meta.workflow.history`.
 
 ### Assist Integration
 
-`useEditorialAssist` composable centralises API calls, handles loading state, and normalises error messages. All requests include optional `articleId` and metadata payloads so the backend can relate assists to content.
+`useEditorialAssist` composable centralises API calls (translate/spell/entity/quality), handles loading state, and normalises error messages. All requests include optional `articleId` and metadata payloads so the backend can relate assists to content.
 
 ## Testing
 
@@ -69,7 +79,7 @@ Route: `/editorial/workbench` (no auth baked in yet; relies on Strapi session co
 
 ## Next Steps
 
-- Replace heuristic assists with real translation/spellcheck/entity providers (respecting DPDP/PII constraints).
-- Extend quality checks to use the planned compliance services (toxicity, plagiarism).
+- Extend provider integration with additional operations (rewrite, fact extraction) and structured metadata merging.
+- Integrate plagiarism/compliance sub-flags into the workflow approval UI (highlight affected paragraphs, remediation playbooks).
 - Wire media manager to Strapi upload endpoints + asset picker.
-- Gate the workbench behind proper auth/role checks once the Nuxt auth layer lands.
+- Add session-aware toast feedback (e.g. when provider unavailable) and allow manual re-run of quality evaluation.

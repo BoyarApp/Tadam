@@ -239,39 +239,117 @@
           </VCardTitle>
 
           <VCardText class="space-y-4">
-            <div class="grid gap-3">
-              <div class="flex items-center justify-between text-sm">
-                <span class="text-slate-500">Word Count</span>
-                <span class="font-semibold text-slate-800">{{ quality.wordCount }}</span>
-              </div>
-              <div class="flex items-center justify-between text-sm">
-                <span class="text-slate-500">Readability</span>
-                <span class="font-semibold text-slate-800">{{ quality.readability }}</span>
-              </div>
-              <div>
-                <div class="flex items-center justify-between text-sm">
-                  <span class="text-slate-500">Toxicity</span>
-                  <span class="font-semibold text-slate-800">{{ (quality.toxicityScore * 100).toFixed(0) }}%</span>
-                </div>
-                <VProgressLinear
-                  :model-value="quality.toxicityScore * 100"
-                  :color="qualityColor"
-                  height="6"
-                  class="mt-1 rounded-full"
-                />
-              </div>
+            <VAlert v-if="qualityError" type="error" variant="tonal" class="border border-red-200">
+              {{ qualityError }}
+            </VAlert>
+
+            <div
+              v-else-if="!form.content.trim()"
+              class="rounded border border-dashed border-slate-200 bg-slate-50 p-3 text-sm text-slate-500"
+            >
+              Add article copy to evaluate quality signals.
             </div>
 
-            <div v-if="quality.suspiciousPhrases.length" class="rounded border border-amber-200 bg-amber-50 p-3">
-              <p class="text-xs font-semibold uppercase tracking-wide text-amber-darken-2">
-                Possible Issues
-              </p>
-              <ul class="mt-2 list-inside list-disc text-xs text-amber-900">
-                <li v-for="phrase in quality.suspiciousPhrases" :key="phrase">
-                  {{ phrase }}
-                </li>
-              </ul>
-            </div>
+            <template v-else>
+              <VProgressLinear
+                v-if="qualityLoading"
+                indeterminate
+                color="primary"
+                height="4"
+                class="rounded"
+              />
+
+              <div v-if="qualityResult" class="space-y-4">
+                <div class="flex items-center justify-between gap-3">
+                  <div>
+                    <div class="flex items-center gap-2 text-sm font-semibold text-slate-700">
+                      <span>Status</span>
+                      <VChip :color="qualityStatusChipColor" size="small" variant="flat">
+                        {{ qualityResult.summary.status }}
+                      </VChip>
+                    </div>
+                    <p v-if="qualityResult.summary.recommendation" class="text-xs text-slate-500">
+                      {{ qualityResult.summary.recommendation }}
+                    </p>
+                  </div>
+                  <span class="text-xs text-slate-400">
+                    Evaluated {{ formatDate(qualityResult.evaluatedAt) }}
+                  </span>
+                </div>
+
+                <div class="grid gap-3 text-sm text-slate-600">
+                  <div class="flex items-center justify-between">
+                    <span>Word Count</span>
+                    <span class="font-semibold text-slate-800">{{ workflowMetrics.wordCount ?? 0 }}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span>Average sentence</span>
+                    <span class="font-semibold text-slate-800">
+                      {{
+                        typeof workflowMetrics.avgSentenceLength === 'number'
+                          ? workflowMetrics.avgSentenceLength.toFixed(1)
+                          : '—'
+                      }}
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span>Readability</span>
+                    <span class="font-semibold text-slate-800">
+                      {{
+                        workflowMetrics.readability
+                          ? String(workflowMetrics.readability).toUpperCase()
+                          : '—'
+                      }}
+                    </span>
+                  </div>
+                  <div>
+                    <div class="flex items-center justify-between">
+                      <span>Toxicity</span>
+                      <span class="font-semibold text-slate-800">
+                        {{ formatPercent(workflowMetrics.toxicityScore) }}
+                      </span>
+                    </div>
+                    <VProgressLinear
+                      :model-value="typeof workflowMetrics.toxicityScore === 'number' ? workflowMetrics.toxicityScore * 100 : 0"
+                      color="primary"
+                      height="6"
+                      class="mt-1 rounded-full"
+                    />
+                  </div>
+                </div>
+
+                <div
+                  v-if="suspiciousPhrases.length"
+                  class="rounded border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900"
+                >
+                  <p class="text-xs font-semibold uppercase tracking-wide text-amber-darken-2">
+                    Phrases to double-check
+                  </p>
+                  <ul class="mt-2 list-inside list-disc">
+                    <li v-for="phrase in suspiciousPhrases" :key="phrase">
+                      {{ phrase }}
+                    </li>
+                  </ul>
+                </div>
+
+                <VAlert
+                  v-if="qualityFlags.length"
+                  type="warning"
+                  variant="tonal"
+                  class="border border-amber-200"
+                >
+                  <p class="text-xs font-semibold uppercase tracking-wide text-amber-darken-2 mb-2">
+                    Flags
+                  </p>
+                  <ul class="space-y-1 text-sm text-amber-900">
+                    <li v-for="(flag, index) in qualityFlags" :key="index">
+                      <strong class="uppercase text-xs text-amber-700">{{ flag.type }}</strong>
+                      <span class="ml-1">{{ flag.message ?? 'Review recommended.' }}</span>
+                    </li>
+                  </ul>
+                </VAlert>
+              </div>
+            </template>
           </VCardText>
         </VCard>
 
@@ -319,7 +397,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch, onMounted } from 'vue';
+import { computed, reactive, ref, watch } from 'vue';
+import { useDebounceFn } from '@vueuse/core';
 import { useRoute } from 'vue-router';
 import { useEditorialAssist } from '~/composables/useEditorialAssist';
 import type {
@@ -329,10 +408,13 @@ import type {
   SourceLink,
   SpellcheckAssistResponse,
   TranslateAssistResponse,
+  QualityEvaluation,
 } from '~/types/editorial';
 
 definePageMeta({
   layout: 'default',
+  middleware: ['editorial-auth'],
+  ssr: false,
 });
 
 useHead({
@@ -380,7 +462,7 @@ const mediaSelection = ref<MediaSelection>({
 const entitySelection = ref<string[]>([]);
 const entitySuggestions = ref<EntitySuggestion[]>([]);
 
-const { loading: assistLoading, translate, spellcheck, entitySuggest } = useEditorialAssist();
+const { loading: assistLoading, translate, spellcheck, entitySuggest, evaluateQuality } = useEditorialAssist();
 
 const translationResult = ref<TranslateAssistResponse | null>(null);
 const spellcheckResult = ref<SpellcheckAssistResponse | null>(null);
@@ -396,42 +478,8 @@ const workflowLoading = ref(false);
 const workflowError = ref<string | null>(null);
 const workflowSuccess = ref<string | null>(null);
 
-const quality = reactive({
-  wordCount: 0,
-  readability: '—',
-  suspiciousPhrases: [] as string[],
-  toxicityScore: 0,
-});
-
-const toxicityLexicon = ['hate', 'kill', 'idiot', 'stupid', 'fake news', 'rumour'];
-const suspiciousLexicon = ['lorem ipsum', 'verify', 'unconfirmed', 'alleged', 'rumour'];
-
-watch(
-  () => form.content,
-  (value) => {
-    const words = value.trim().split(/\s+/).filter(Boolean);
-    const sentences = value.split(/[.!?]/).filter(sentence => sentence.trim().length > 0);
-
-    quality.wordCount = words.length;
-
-    if (sentences.length === 0 || words.length === 0) {
-      quality.readability = '—';
-    } else {
-      const avgSentenceLength = words.length / sentences.length;
-      quality.readability = avgSentenceLength <= 12 ? 'Easy' : avgSentenceLength <= 18 ? 'Moderate' : 'Complex';
-    }
-
-    const lowerContent = value.toLowerCase();
-    quality.suspiciousPhrases = suspiciousLexicon.filter(phrase => lowerContent.includes(phrase));
-
-    const toxicityHits = toxicityLexicon.reduce(
-      (count, term) => count + (lowerContent.includes(term) ? 1 : 0),
-      0,
-    );
-    quality.toxicityScore = Math.min(1, toxicityHits / toxicityLexicon.length);
-  },
-  { immediate: true },
-);
+const qualityResult = ref<QualityEvaluation | null>(null);
+const qualityError = ref<string | null>(null);
 
 const workflowStatusColor = computed(() => {
   switch (workflowState.status) {
@@ -448,15 +496,111 @@ const workflowStatusColor = computed(() => {
   }
 });
 
-const qualityColor = computed(() => {
-  if (quality.toxicityScore <= 0.3) {
+let qualityRequestId = 0;
+
+const qualityLoading = computed(() => assistLoading.quality);
+
+const fallbackMetrics = computed(() => {
+  const words = form.content.trim().split(/\s+/).filter(Boolean);
+  const sentences = form.content
+    .split(/[.!?]/)
+    .map(sentence => sentence.trim())
+    .filter(Boolean);
+
+  const wordCount = words.length;
+  const avgSentenceLength = sentences.length ? wordCount / sentences.length : wordCount;
+  const readability = avgSentenceLength <= 12 ? 'easy' : avgSentenceLength <= 18 ? 'moderate' : 'complex';
+
+  return {
+    wordCount,
+    avgSentenceLength,
+    readability,
+  };
+});
+
+const workflowMetrics = computed(() => ({
+  ...fallbackMetrics.value,
+  ...(qualityResult.value?.metrics ?? {}),
+}));
+
+const qualitySummary = computed(() => qualityResult.value?.summary ?? null);
+
+const qualityStatusChipColor = computed(() => {
+  const status = qualitySummary.value?.status?.toLowerCase?.() ?? '';
+  if (!status) {
+    return 'secondary';
+  }
+  if (status.includes('pass') || status === 'ok' || status === 'clear') {
     return 'success';
   }
-  if (quality.toxicityScore <= 0.6) {
+  if (status.includes('review') || status.includes('warn')) {
     return 'warning';
   }
-  return 'error';
+  if (status.includes('fail') || status.includes('block') || status.includes('reject')) {
+    return 'error';
+  }
+  return 'secondary';
 });
+
+const qualityFlags = computed(() => qualityResult.value?.flags ?? []);
+
+const suspiciousPhrases = computed(() => {
+  const phrases = workflowMetrics.value.suspiciousPhrases;
+  return Array.isArray(phrases) ? phrases : [];
+});
+
+const formatPercent = (value: unknown) => {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return '—';
+  }
+  return `${Math.round(value * 100)}%`;
+};
+
+const performQualityEvaluation = async (reason: 'initial' | 'content-change') => {
+  const trimmed = form.content.trim();
+  if (!trimmed) {
+    qualityResult.value = null;
+    qualityError.value = null;
+    return;
+  }
+
+  const requestId = ++qualityRequestId;
+
+  try {
+    const response = await evaluateQuality({
+      text: trimmed,
+      language: form.language,
+      articleId: articleId.value ?? undefined,
+      metadata: {
+        title: form.title,
+        reason,
+      },
+    });
+
+    if (requestId === qualityRequestId) {
+      qualityResult.value = response;
+      qualityError.value = null;
+    }
+  } catch (error: any) {
+    if (requestId === qualityRequestId) {
+      qualityError.value = error?.message ?? 'Unable to evaluate quality.';
+    }
+  }
+};
+
+const debouncedQualityEvaluation = useDebounceFn(() => performQualityEvaluation('content-change'), 800);
+
+watch(
+  () => [form.content, form.language],
+  () => {
+    if (!form.content.trim()) {
+      qualityResult.value = null;
+      qualityError.value = null;
+      return;
+    }
+    debouncedQualityEvaluation();
+  },
+);
 
 const workflowHistory = computed(() => [...workflowState.history].reverse());
 
@@ -642,9 +786,15 @@ const runWorkflowAction = async (action: 'submit' | 'approve' | 'publish' | 'req
           action,
           triggeredFrom: 'editorial-workbench',
           metrics: {
-            wordCount: quality.wordCount,
-            suspicious: quality.suspiciousPhrases.length,
-            toxicity: quality.toxicityScore,
+            language: workflowMetrics.value.language ?? form.language,
+            wordCount: workflowMetrics.value.wordCount ?? fallbackMetrics.value.wordCount,
+            avgSentenceLength: workflowMetrics.value.avgSentenceLength,
+            readability: workflowMetrics.value.readability,
+            toxicityScore: workflowMetrics.value.toxicityScore ?? null,
+            suspiciousPhrases: suspiciousPhrases.value,
+            qualityStatus: qualitySummary.value?.status ?? null,
+            qualityFlags: qualityFlags.value,
+            evaluatedAt: qualityResult.value?.evaluatedAt ?? null,
             sources: sources.value.length,
             factEntries: factEntries.value.length,
             entities: entitySelection.value.length,
@@ -729,9 +879,11 @@ const fetchArticle = async () => {
     };
 
     applyWorkflowFromArticle(attributes);
+    await performQualityEvaluation('initial');
   } catch (error: any) {
     workflowError.value =
       error?.data?.error?.message ?? error?.message ?? 'Unable to load article data.';
+    qualityResult.value = null;
   } finally {
     workflowLoading.value = false;
   }
@@ -746,12 +898,6 @@ watch(
   },
   { immediate: true },
 );
-
-onMounted(() => {
-  if (articleId.value) {
-    fetchArticle();
-  }
-});
 </script>
 
 <style scoped>

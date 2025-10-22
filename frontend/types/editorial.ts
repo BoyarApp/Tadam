@@ -65,3 +65,34 @@ export type EditorialAssistResponse =
   | TranslateAssistResponse
   | SpellcheckAssistResponse
   | EntityAssistResponse;
+
+export type QualitySummary = {
+  status: string;
+  recommendation?: string;
+};
+
+export type QualityMetrics = {
+  language?: string;
+  wordCount?: number;
+  avgSentenceLength?: number;
+  uniqueWords?: number;
+  readability?: string;
+  toxicityScore?: number;
+  suspiciousPhrases?: string[];
+  [key: string]: unknown;
+};
+
+export type QualityFlag = {
+  type: string;
+  severity?: number;
+  message?: string;
+  [key: string]: unknown;
+};
+
+export type QualityEvaluation = {
+  summary: QualitySummary;
+  metrics: QualityMetrics;
+  flags: QualityFlag[];
+  metadata?: Record<string, unknown>;
+  evaluatedAt: string;
+};

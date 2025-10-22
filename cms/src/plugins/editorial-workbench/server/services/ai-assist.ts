@@ -1,8 +1,9 @@
 import type { Core } from '@strapi/strapi';
 import { sanitizeEntityInput } from '../utils/sanitize';
+import { callAssistProvider, callComplianceProvider } from './provider-client';
 
 type AssistContext = {
-  user: { id?: number } | null;
+  user?: { id?: number } | null;
   articleId?: number;
   submissionId?: number;
   metadata?: Record<string, unknown>;
@@ -24,27 +25,41 @@ type EntitySuggestArgs = AssistContext & {
   language?: string;
 };
 
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+type QualityArgs = AssistContext & {
+  text: string;
+  language?: string;
+};
+
+type LogAssistArgs = {
+  operationType: string;
+  inputText: string;
+  outputText?: string;
+  confidenceScore?: number;
+  user: { id?: number } | null;
+  articleId?: number;
+  submissionId?: number;
+  metadata?: Record<string, unknown>;
+};
 
 const cleanseToken = (token: string) =>
   token.replace(/^[^A-Za-z0-9\u0B80-\u0BFF]+|[^A-Za-z0-9\u0B80-\u0BFF]+$/g, '');
 
-const buildEntitySuggestions = (text: string) => {
+const buildHeuristicEntities = (text: string) => {
   const tokens = text
     .split(/\s+/)
     .map((token) => cleanseToken(token))
     .filter((token) => token.length >= 3);
 
-  const unique = Array.from(new Set(tokens)).slice(0, 8);
+  const unique = Array.from(new Set(tokens)).slice(0, 12);
 
   return unique.map((entity) => ({
     label: entity,
     type: 'keyword',
-    confidence: Math.min(0.9, 0.4 + entity.length * 0.03),
+    confidence: Math.min(0.9, 0.45 + entity.length * 0.03),
   }));
 };
 
-const buildSpellcheckSuggestions = (text: string) => {
+const buildHeuristicSpellcheck = (text: string) => {
   const suggestions: Array<{ position: number; length: number; replacement: string; reason: string }> = [];
 
   const doubleSpaceIndex = text.indexOf('  ');
@@ -70,6 +85,84 @@ const buildSpellcheckSuggestions = (text: string) => {
   return suggestions;
 };
 
+const buildHeuristicQuality = (text: string, language: string) => {
+  const words = text.trim().split(/\s+/).filter(Boolean);
+  const sentences = text
+    .split(/[.!?]/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+
+  const wordCount = words.length;
+  const avgSentenceLength = sentences.length ? wordCount / sentences.length : wordCount;
+  const uniqueWords = new Set(words.map((word) => word.toLowerCase())).size;
+
+  const toxicityLexicon = ['hate', 'kill', 'idiot', 'stupid', 'fake news', 'rumour'];
+  const suspiciousLexicon = ['lorem ipsum', 'verify', 'unconfirmed', 'alleged', 'rumour'];
+
+  const lowerContent = text.toLowerCase();
+  const suspiciousPhrases = suspiciousLexicon.filter((phrase) => lowerContent.includes(phrase));
+
+  const toxicityHits = toxicityLexicon.reduce(
+    (count, term) => count + (lowerContent.includes(term) ? 1 : 0),
+    0,
+  );
+  const toxicityScore = Math.min(1, toxicityHits / toxicityLexicon.length);
+
+  const flags: Array<Record<string, unknown>> = [];
+
+  if (toxicityScore > 0.4) {
+    flags.push({
+      type: 'toxicity',
+      severity: toxicityScore,
+      message: 'Potential toxic language detected.',
+    });
+  }
+
+  if (suspiciousPhrases.length > 0) {
+    flags.push({
+      type: 'suspicious_language',
+      severity: 0.6,
+      message: 'Copy includes phrases requiring verification.',
+      phrases: suspiciousPhrases,
+    });
+  }
+
+  if (wordCount < 120) {
+    flags.push({
+      type: 'length',
+      severity: 0.3,
+      message: 'Story is shorter than typical desk guidelines.',
+    });
+  }
+
+  const readability =
+    avgSentenceLength <= 12 ? 'easy' : avgSentenceLength <= 18 ? 'moderate' : 'complex';
+
+  return {
+    summary: {
+      status: flags.length ? 'review' : 'pass',
+      recommendation: flags.length
+        ? 'Editor review recommended before publishing.'
+        : 'Meets baseline quality checks.',
+    },
+    metrics: {
+      language,
+      wordCount,
+      avgSentenceLength,
+      uniqueWords,
+      readability,
+      toxicityScore,
+      suspiciousPhrases,
+    },
+    flags,
+    metadata: {
+      strategy: 'heuristic',
+    },
+  };
+};
+
+const nowIso = () => new Date().toISOString();
+
 export default ({ strapi }: { strapi: Core.Strapi }) => ({
   async translate({
     text,
@@ -80,36 +173,63 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     submissionId,
     metadata,
   }: TranslateArgs) {
-    await sleep(50); // Simulate latency / stub
+    const fallback = () => ({
+      type: 'translate' as const,
+      input: text,
+      output: text,
+      metadata: {
+        sourceLanguage,
+        targetLanguage,
+        confidence: 0.6,
+        provider: 'fallback',
+        ...metadata,
+      },
+    });
 
-    const confidence = 0.6;
-    const output = text; // Placeholder until real provider wired
-    const hydratedMetadata = {
-      sourceLanguage,
-      targetLanguage,
-      confidence,
-      strategy: 'noop',
-      ...metadata,
-    };
+    let result = fallback();
+
+    try {
+      const providerResult = (await callAssistProvider(strapi, 'translate', {
+        text,
+        sourceLanguage,
+        targetLanguage,
+        articleId,
+        submissionId,
+        metadata,
+      })) as Record<string, any>;
+
+      result = {
+        type: 'translate' as const,
+        input: text,
+        output: providerResult.output ?? providerResult.translatedText ?? text,
+        metadata: {
+          sourceLanguage,
+          targetLanguage,
+          confidence: providerResult.confidence ?? providerResult.metadata?.confidence ?? 0.85,
+          provider: 'external',
+          ...metadata,
+          ...providerResult.metadata,
+        },
+      };
+    } catch (error) {
+      strapi.log.warn('[editorial-workbench] translate provider fallback', error);
+    }
 
     const logEntryId = await this.logAssist({
       operationType: 'translate',
       inputText: text,
-      outputText: output,
-      confidenceScore: confidence,
+      outputText: result.output,
+      confidenceScore: (result.metadata.confidence as number) ?? undefined,
       user,
       articleId,
       submissionId,
-      metadata: hydratedMetadata,
+      metadata: result.metadata,
     });
 
     return {
-      type: 'translate' as const,
-      input: text,
-      output,
-      metadata: hydratedMetadata,
+      ...result,
       logEntryId,
-      loggedAt: new Date().toISOString(),
+      loggedAt: nowIso(),
     };
   },
 
@@ -121,35 +241,66 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     submissionId,
     metadata,
   }: SpellcheckArgs) {
-    await sleep(30);
-
-    const suggestions = buildSpellcheckSuggestions(text);
-    const confidence = suggestions.length ? 0.75 : 0.5;
-    const hydratedMetadata = {
-      language,
-      confidence,
-      totalSuggestions: suggestions.length,
-      ...metadata,
+    const fallback = () => {
+      const suggestions = buildHeuristicSpellcheck(text);
+      const confidence = suggestions.length ? 0.75 : 0.5;
+      return {
+        type: 'spell_check' as const,
+        input: text,
+        suggestions,
+        metadata: {
+          language,
+          confidence,
+          totalSuggestions: suggestions.length,
+          provider: 'fallback',
+          ...metadata,
+        },
+      };
     };
+
+    let result = fallback();
+
+    try {
+      const providerResult = (await callAssistProvider(strapi, 'spellcheck', {
+        text,
+        language,
+        articleId,
+        submissionId,
+        metadata,
+      })) as Record<string, any>;
+
+      result = {
+        type: 'spell_check' as const,
+        input: text,
+        suggestions: providerResult.suggestions ?? providerResult.updates ?? [],
+        metadata: {
+          language,
+          confidence: providerResult.confidence ?? providerResult.metadata?.confidence ?? 0.9,
+          totalSuggestions: (providerResult.suggestions ?? []).length,
+          provider: 'external',
+          ...metadata,
+          ...providerResult.metadata,
+        },
+      };
+    } catch (error) {
+      strapi.log.warn('[editorial-workbench] spellcheck provider fallback', error);
+    }
 
     const logEntryId = await this.logAssist({
       operationType: 'spell_check',
       inputText: text,
-      outputText: JSON.stringify(suggestions),
-      confidenceScore: confidence,
+      outputText: JSON.stringify(result.suggestions),
+      confidenceScore: (result.metadata.confidence as number) ?? undefined,
       user,
       articleId,
       submissionId,
-      metadata: hydratedMetadata,
+      metadata: result.metadata,
     });
 
     return {
-      type: 'spell_check' as const,
-      input: text,
-      suggestions,
-      metadata: hydratedMetadata,
+      ...result,
       logEntryId,
-      loggedAt: new Date().toISOString(),
+      loggedAt: nowIso(),
     };
   },
 
@@ -161,35 +312,107 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     submissionId,
     metadata,
   }: EntitySuggestArgs) {
-    await sleep(40);
-
-    const entities = buildEntitySuggestions(text);
-    const confidence = entities.length ? 0.55 : 0.4;
-    const hydratedMetadata = {
-      language,
-      confidence,
-      totalEntities: entities.length,
-      ...metadata,
+    const fallback = () => {
+      const entities = buildHeuristicEntities(text);
+      const confidence = entities.length ? 0.55 : 0.4;
+      return {
+        type: 'entity_tag' as const,
+        input: text,
+        entities,
+        metadata: {
+          language,
+          confidence,
+          totalEntities: entities.length,
+          provider: 'fallback',
+          ...metadata,
+        },
+      };
     };
+
+    let result = fallback();
+
+    try {
+      const providerResult = (await callAssistProvider(strapi, 'entitySuggest', {
+        text,
+        language,
+        articleId,
+        submissionId,
+        metadata,
+      })) as Record<string, any>;
+
+      result = {
+        type: 'entity_tag' as const,
+        input: text,
+        entities: providerResult.entities ?? providerResult.suggestions ?? [],
+        metadata: {
+          language,
+          confidence: providerResult.confidence ?? providerResult.metadata?.confidence ?? 0.8,
+          totalEntities: (providerResult.entities ?? []).length,
+          provider: 'external',
+          ...metadata,
+          ...providerResult.metadata,
+        },
+      };
+    } catch (error) {
+      strapi.log.warn('[editorial-workbench] entitySuggest provider fallback', error);
+    }
 
     const logEntryId = await this.logAssist({
       operationType: 'entity_tag',
       inputText: text,
-      outputText: JSON.stringify(entities),
-      confidenceScore: confidence,
+      outputText: JSON.stringify(result.entities),
+      confidenceScore: (result.metadata.confidence as number) ?? undefined,
       user,
       articleId,
       submissionId,
-      metadata: hydratedMetadata,
+      metadata: result.metadata,
     });
 
     return {
-      type: 'entity_tag' as const,
-      input: text,
-      entities,
-      metadata: hydratedMetadata,
+      ...result,
       logEntryId,
-      loggedAt: new Date().toISOString(),
+      loggedAt: nowIso(),
+    };
+  },
+
+  async evaluateQuality({
+    text,
+    language = 'ta',
+    articleId,
+    submissionId,
+    metadata,
+  }: QualityArgs) {
+    let result = buildHeuristicQuality(text, language);
+
+    try {
+      const providerResult = (await callComplianceProvider(strapi, {
+        text,
+        language,
+        articleId,
+        submissionId,
+        metadata,
+      })) as Record<string, any>;
+
+      result = {
+        summary: providerResult.summary ?? result.summary,
+        metrics: {
+          ...result.metrics,
+          ...providerResult.metrics,
+        },
+        flags: providerResult.flags ?? result.flags,
+        metadata: {
+          provider: 'external',
+          ...metadata,
+          ...providerResult.metadata,
+        },
+      };
+    } catch (error) {
+      strapi.log.warn('[editorial-workbench] compliance provider fallback', error);
+    }
+
+    return {
+      ...result,
+      evaluatedAt: nowIso(),
     };
   },
 
@@ -202,16 +425,7 @@ export default ({ strapi }: { strapi: Core.Strapi }) => ({
     articleId,
     submissionId,
     metadata,
-  }: {
-    operationType: string;
-    inputText: string;
-    outputText?: string;
-    confidenceScore?: number;
-    user: { id?: number } | null;
-    articleId?: number;
-    submissionId?: number;
-    metadata?: Record<string, unknown>;
-  }): Promise<number | null> {
+  }: LogAssistArgs): Promise<number | null> {
     const data: Record<string, unknown> = {
       operation_type: operationType,
       input_text: inputText,

@@ -105,4 +105,22 @@ export default ({ strapi }) => ({
 
     ctx.body = sanitizeEntityInput(result);
   },
+
+  async quality(ctx: Context) {
+    const payload = ensurePayload(ctx);
+    if (!payload) return;
+
+    const result = await strapi
+      .plugin('editorial-workbench')
+      .service('ai-assist')
+      .evaluateQuality({
+        text: payload.text,
+        language: payload.language,
+        articleId: payload.articleId,
+        submissionId: payload.submissionId,
+        metadata: payload.metadata,
+      });
+
+    ctx.body = sanitizeEntityInput(result);
+  },
 });

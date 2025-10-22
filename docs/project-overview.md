@@ -56,10 +56,10 @@ Deliver a Tamil-first news platform that is fast on low-end phones, builds trust
 - Configure JWT/auth secrets, rate limiting, admin panel customisation.
 
 **Sprint P0.2 – Editorial Desk Prototype**
-- Scaffolded `cms/src/plugins/editorial-workbench` with translate/spellcheck/entity endpoints logging to `ai-assist-log`.
-- Added article workflow actions (`submit`, `approve`, `publish`, `request-changes`) with role gating, history capture, and version snapshots.
-- Built Nuxt workbench page featuring rich-text editor, AI assists, source/fact box managers, media tracker, entity tagging UI, and workflow timeline.
-- Introduced local quality stubs (word count, readability, toxicity hints) ahead of full compliance services.
+- Scaffolded `cms/src/plugins/editorial-workbench` with translate/spellcheck/entity endpoints logging to `ai-assist-log` and pluggable AI providers (fallback heuristics when unset).
+- Added `/editorial-workbench/quality/evaluate` compliance endpoint plus article workflow actions (`submit`, `approve`, `publish`, `request-changes`) with role gating, history capture, and version snapshots.
+- Built Nuxt workbench page featuring rich-text editor, AI assists, source/fact box managers, media tracker, entity tagging UI, a provider-backed quality panel, and workflow timeline.
+- Wrapped `/editorial/workbench` in session/role middleware and surfaced a login hand-off page for Strapi authentication.
 
 **Sprint P0.3 – Nuxt Shell & Personalisation Basics**
 - Scaffold Nuxt 3 + Vuetify app (`frontend/`), set up theming, fonts, layout.

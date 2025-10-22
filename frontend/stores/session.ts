@@ -4,6 +4,11 @@ export type SessionProfile = {
   id: number;
   email: string;
   name?: string;
+  role?: {
+    id: number;
+    name: string;
+    type: string;
+  } | null;
   membershipStatus: string;
   membershipExpiresAt?: string | null;
   membershipReminderSentAt?: string | null;
@@ -21,6 +26,10 @@ export const useSessionStore = defineStore('session', {
   }),
   getters: {
     isSupporter: state => state.profile?.membershipStatus === 'active',
+    isEditorial: (state) => {
+      const roleType = state.profile?.role?.type ?? '';
+      return ['editor', 'author', 'contributor'].includes(roleType);
+    },
     membershipExpiresAt: state => state.profile?.membershipExpiresAt ?? null,
     membershipReminderSentAt: state => state.profile?.membershipReminderSentAt ?? null,
     membershipCancelRequestedAt: state => state.profile?.membershipCancelRequestedAt ?? null,

@@ -3,6 +3,7 @@ import type {
   EntityAssistResponse,
   SpellcheckAssistResponse,
   TranslateAssistResponse,
+  QualityEvaluation,
 } from '~/types/editorial';
 
 type AssistPayload = {
@@ -28,6 +29,7 @@ export const useEditorialAssist = () => {
     translate: false,
     spellcheck: false,
     entity: false,
+    quality: false,
   });
 
   const buildBody = (payload: AssistPayload) => {
@@ -62,8 +64,8 @@ export const useEditorialAssist = () => {
     return body;
   };
 
-  const callAssist = async <T>(endpoint: 'translate' | 'spellcheck' | 'entity-suggest', payload: AssistPayload) => {
-    const url = `${baseUrl}/editorial-workbench/ai/${endpoint}`;
+  const callAssist = async <T>(endpoint: string, payload: AssistPayload) => {
+    const url = `${baseUrl}/${endpoint}`;
 
     try {
       return await $fetch<T>(url, {
@@ -84,7 +86,7 @@ export const useEditorialAssist = () => {
   const translate = async (payload: AssistPayload): Promise<TranslateAssistResponse> => {
     loading.translate = true;
     try {
-      return await callAssist<TranslateAssistResponse>('translate', payload);
+      return await callAssist<TranslateAssistResponse>('editorial-workbench/ai/translate', payload);
     } finally {
       loading.translate = false;
     }
@@ -93,7 +95,7 @@ export const useEditorialAssist = () => {
   const spellcheck = async (payload: AssistPayload): Promise<SpellcheckAssistResponse> => {
     loading.spellcheck = true;
     try {
-      return await callAssist<SpellcheckAssistResponse>('spellcheck', payload);
+      return await callAssist<SpellcheckAssistResponse>('editorial-workbench/ai/spellcheck', payload);
     } finally {
       loading.spellcheck = false;
     }
@@ -102,9 +104,18 @@ export const useEditorialAssist = () => {
   const entitySuggest = async (payload: AssistPayload): Promise<EntityAssistResponse> => {
     loading.entity = true;
     try {
-      return await callAssist<EntityAssistResponse>('entity-suggest', payload);
+      return await callAssist<EntityAssistResponse>('editorial-workbench/ai/entity-suggest', payload);
     } finally {
       loading.entity = false;
+    }
+  };
+
+  const evaluateQuality = async (payload: AssistPayload): Promise<QualityEvaluation> => {
+    loading.quality = true;
+    try {
+      return await callAssist<QualityEvaluation>('editorial-workbench/quality/evaluate', payload);
+    } finally {
+      loading.quality = false;
     }
   };
 
@@ -113,5 +124,6 @@ export const useEditorialAssist = () => {
     translate,
     spellcheck,
     entitySuggest,
+    evaluateQuality,
   };
 };

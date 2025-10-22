@@ -129,10 +129,23 @@ export const seedRoles = async (strapi: Core.Strapi) => {
 
     for (const role of ROLE_DEFINITIONS) {
       try {
-        // Use db.query API to bypass lifecycle hooks
-        const existing = await strapi.db.query('plugin::users-permissions.role').findOne({
-          where: { type: role.type },
-        });
+        // Use db.query API when available to bypass lifecycle hooks; fallback to entityService otherwise.
+        let existing = null as any;
+
+        if (strapi.db?.query) {
+          existing = await strapi.db.query('plugin::users-permissions.role').findOne({
+            where: { type: role.type },
+          });
+        } else {
+          const matches = await strapi.entityService.findMany(
+            'plugin::users-permissions.role',
+            {
+              filters: { type: role.type },
+              limit: 1,
+            },
+          );
+          existing = Array.isArray(matches) && matches.length > 0 ? matches[0] : null;
+        }
 
         if (!existing) {
           await roleService.createRole({
@@ -141,21 +154,24 @@ export const seedRoles = async (strapi: Core.Strapi) => {
             type: role.type,
             permissions: role.permissions,
           });
-          strapi.log.info(`Seeded role: ${role.name}`);
+          strapi.log?.info?.(`Seeded role: ${role.name}`);
         } else {
           await roleService.updateRole(existing.id, {
-            permissions: role.permissions,
+            permissions: {
+              ...(existing.permissions ?? {}),
+              ...role.permissions,
+            },
           });
-          strapi.log.info(`Updated role: ${role.name}`);
+          strapi.log?.info?.(`Updated role: ${role.name}`);
         }
       } catch (error) {
         // Catch unique constraint violations silently
         if (!error.message?.includes('unique') && !error.message?.includes('duplicate')) {
-          strapi.log.warn(`Could not seed role ${role.name}:`, error.message);
+          strapi.log?.warn?.(`Could not seed role ${role.name}:`, error.message);
         }
       }
     }
   } catch (error) {
-    strapi.log.warn('Role seeding failed:', error.message);
+    strapi.log?.warn?.('Role seeding failed:', error.message);
   }
 };
