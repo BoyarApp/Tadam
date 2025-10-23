@@ -64,7 +64,7 @@ Deliver a Tamil-first news platform that is fast on low-end phones, builds trust
 **Sprint P0.3 – Nuxt Shell & Personalisation Basics** ✅ Complete
 - ✅ Scaffolded Nuxt 3 + Vuetify app with theming (light/dark), Mukta Malar fonts, and responsive layout
 - ✅ Implemented home feed with Alerts/Hot/My Mix/Outside bubble sections with real-time feed composable
-- ✅ Built article detail page with share controls (native share, WhatsApp, Twitter, copy link)
+- ✅ Built article detail page with share controls (native share, WhatsApp, Twitter, copy link) and Strapi-backed content (fact box, explainers, related stories)
 - ✅ Created district picker overlay (3-district limit), category rail component, AppShell with header/bottom nav
 - ✅ Configured service worker with PWA offline cache strategies (API, images, documents, fonts)
 - ✅ Implemented API service layer (`useApi`, `useArticles`) with proper error handling and mock fallbacks

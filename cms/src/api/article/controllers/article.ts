@@ -36,6 +36,76 @@ const getRequestBody = (ctx: any) =>
   ((ctx?.request as Record<string, unknown>)?.['body'] ?? {}) as Record<string, unknown>;
 
 export default factories.createCoreController('api::article.article', ({ strapi }) => ({
+  async related(ctx) {
+    const slug = ctx.request?.query?.slug ?? ctx.query?.slug;
+    if (!slug || typeof slug !== 'string') {
+      return ctx.badRequest('A slug query parameter is required.');
+    }
+
+    const limitParam = ctx.request?.query?.limit ?? ctx.query?.limit;
+    const parsedLimit = Number.parseInt(String(limitParam ?? '6'), 10);
+    const limit = Number.isFinite(parsedLimit) && parsedLimit > 0 ? Math.min(parsedLimit, 12) : 6;
+
+    const [currentArticle] =
+      ((await strapi.entityService.findMany('api::article.article', {
+        filters: {
+          slug,
+          status: 'published',
+        },
+        populate: {
+          categories: { fields: ['id'] },
+          districts: { fields: ['id'] },
+        },
+        limit: 1,
+      })) as any[]) ?? [];
+
+    if (!currentArticle) {
+      const sanitizedEmpty = await this.sanitizeOutput([], ctx);
+      return this.transformResponse(sanitizedEmpty);
+    }
+
+    const categoryIds: number[] = Array.isArray(currentArticle.categories)
+      ? currentArticle.categories.map((category: any) => category?.id).filter((id: any) => Number.isInteger(id))
+      : [];
+
+    const districtIds: number[] = Array.isArray(currentArticle.districts)
+      ? currentArticle.districts.map((district: any) => district?.id).filter((id: any) => Number.isInteger(id))
+      : [];
+
+    const relatedFilters: Record<string, unknown> = {
+      slug: { $ne: slug },
+      status: 'published',
+    };
+
+    const orClauses: Record<string, unknown>[] = [];
+
+    if (categoryIds.length) {
+      orClauses.push({ categories: { id: { $in: categoryIds } } });
+    }
+
+    if (districtIds.length) {
+      orClauses.push({ districts: { id: { $in: districtIds } } });
+    }
+
+    if (orClauses.length) {
+      relatedFilters.$or = orClauses;
+    }
+
+    const relatedArticles = await strapi.entityService.findMany('api::article.article', {
+      filters: relatedFilters,
+      sort: { publishedAt: 'desc' },
+      limit,
+      populate: {
+        categories: { fields: ['name', 'slug'] },
+        districts: { fields: ['name', 'slug'] },
+        hero_image: { fields: ['url', 'alternativeText', 'caption'] },
+      },
+    });
+
+    const sanitized = await this.sanitizeOutput(relatedArticles, ctx);
+    return this.transformResponse(sanitized);
+  },
+
   async submitForReview(ctx) {
     const user = ctx.state?.user;
     if (!user) {
