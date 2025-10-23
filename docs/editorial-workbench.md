@@ -25,12 +25,47 @@ Failures are swallowed to avoid blocking the UI; warnings are pushed to Strapi l
 
 ### Provider Configuration
 
-Set the following environment variables (or `.env`) to point the plugin at real services:
+The editorial workbench supports two modes:
 
-- `EDITORIAL_AI_BASE_URL` / `EDITORIAL_AI_API_KEY` / `EDITORIAL_AI_TIMEOUT_MS`
-- `EDITORIAL_COMPLIANCE_BASE_URL` / `EDITORIAL_COMPLIANCE_API_KEY` / `EDITORIAL_COMPLIANCE_TIMEOUT_MS`
+1. **OpenRouter Integration** (Recommended for Tamil)
+   - Built-in adapter for OpenRouter's unified AI API
+   - Supports 400+ models including Google Gemini (best for Tamil)
+   - Free tier available with rate limits
+   - See [OpenRouter Setup Guide](./openrouter-setup.md) for detailed instructions
 
-If a provider is unreachable or unset, the service falls back to the heuristic implementations and emits a warning.
+2. **Custom Provider API**
+   - Direct integration with your own AI/compliance endpoints
+   - Requires endpoints matching the provider-client contract
+
+#### OpenRouter Setup (Quick Start)
+
+```bash
+# cms/.env
+EDITORIAL_AI_BASE_URL=https://openrouter.ai/api/v1
+EDITORIAL_AI_API_KEY=sk-or-v1-YOUR-KEY-HERE
+EDITORIAL_AI_MODEL=google/gemini-flash-1.5:free
+EDITORIAL_AI_TIMEOUT_MS=30000
+
+EDITORIAL_COMPLIANCE_BASE_URL=https://openrouter.ai/api/v1
+EDITORIAL_COMPLIANCE_API_KEY=sk-or-v1-YOUR-KEY-HERE
+EDITORIAL_COMPLIANCE_TIMEOUT_MS=30000
+```
+
+Get your API key at [openrouter.ai/keys](https://openrouter.ai/keys).
+
+#### Custom Provider Setup
+
+```bash
+EDITORIAL_AI_BASE_URL=https://your-api.example.com
+EDITORIAL_AI_API_KEY=your-api-key
+EDITORIAL_AI_TIMEOUT_MS=8000
+
+EDITORIAL_COMPLIANCE_BASE_URL=https://your-compliance-api.example.com
+EDITORIAL_COMPLIANCE_API_KEY=your-compliance-key
+EDITORIAL_COMPLIANCE_TIMEOUT_MS=8000
+```
+
+If a provider is unreachable or unset, the service falls back to heuristic implementations and emits a warning.
 
 ### Workflow Helpers
 

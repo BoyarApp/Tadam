@@ -1,5 +1,6 @@
 import type { Core } from '@strapi/strapi';
 import { getPluginConfig, getProviderHeaders, assertProviderConfigured } from '../utils/config';
+import { OpenRouterAdapter } from './openrouter-adapter';
 
 type AssistOperation = 'translate' | 'spellcheck' | 'entitySuggest';
 
@@ -13,11 +14,58 @@ type CompliancePayload = {
   metadata?: Record<string, unknown>;
 };
 
+let openrouterAdapter: OpenRouterAdapter | null = null;
+
+const getOpenRouterAdapter = (strapi: Core.Strapi): OpenRouterAdapter | null => {
+  const config = getPluginConfig(strapi);
+  const provider = config.providers.ai;
+
+  // Check if we're using OpenRouter
+  if (provider.baseUrl && provider.baseUrl.includes('openrouter.ai')) {
+    if (!openrouterAdapter) {
+      const model = process.env.EDITORIAL_AI_MODEL || 'google/gemini-flash-1.5:free';
+      openrouterAdapter = new OpenRouterAdapter({
+        apiKey: provider.apiKey || '',
+        baseUrl: provider.baseUrl,
+        model,
+        timeoutMs: provider.timeoutMs,
+      });
+    }
+    return openrouterAdapter;
+  }
+
+  return null;
+};
+
 export const callAssistProvider = async (
   strapi: Core.Strapi,
   operation: AssistOperation,
   payload: AssistPayload,
 ) => {
+  const adapter = getOpenRouterAdapter(strapi);
+
+  // Use OpenRouter adapter if configured
+  if (adapter) {
+    const params = {
+      text: payload.text as string,
+      sourceLanguage: payload.sourceLanguage as string | undefined,
+      targetLanguage: payload.targetLanguage as string | undefined,
+      language: payload.language as string | undefined,
+    };
+
+    switch (operation) {
+      case 'translate':
+        return await adapter.translate(params);
+      case 'spellcheck':
+        return await adapter.spellcheck(params);
+      case 'entitySuggest':
+        return await adapter.entitySuggest(params);
+      default:
+        throw new Error(`Unsupported operation: ${operation}`);
+    }
+  }
+
+  // Otherwise use direct provider API
   const config = getPluginConfig(strapi);
   const provider = config.providers.ai;
   assertProviderConfigured(provider, 'ai');
@@ -54,6 +102,17 @@ export const callComplianceProvider = async (
   strapi: Core.Strapi,
   payload: CompliancePayload,
 ) => {
+  const adapter = getOpenRouterAdapter(strapi);
+
+  // Use OpenRouter adapter for quality evaluation too
+  if (adapter) {
+    return await adapter.evaluateQuality({
+      text: payload.text,
+      language: payload.language,
+    });
+  }
+
+  // Otherwise use direct compliance provider API
   const config = getPluginConfig(strapi);
   const provider = config.providers.compliance;
   assertProviderConfigured(provider, 'compliance');
@@ -86,9 +145,13 @@ export const callComplianceProvider = async (
   }
 };
 
-const safeJson = async (response: Response) => {
+interface ErrorBody {
+  message?: string;
+}
+
+const safeJson = async (response: Response): Promise<ErrorBody | null> => {
   try {
-    return await response.json();
+    return await response.json() as ErrorBody;
   } catch {
     return null;
   }

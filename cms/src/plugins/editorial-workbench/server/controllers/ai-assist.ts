@@ -3,6 +3,15 @@ import { sanitizeEntityInput } from '../utils/sanitize';
 
 const MAX_TEXT_LENGTH = 5000;
 
+interface RequestBody {
+  text?: string;
+  language?: string;
+  targetLanguage?: string;
+  articleId?: unknown;
+  submissionId?: unknown;
+  metadata?: unknown;
+}
+
 const ensurePayload = (ctx: Context) => {
   const {
     text,
@@ -11,7 +20,7 @@ const ensurePayload = (ctx: Context) => {
     articleId,
     submissionId,
     metadata,
-  } = ctx.request.body ?? {};
+  } = (ctx.request as any).body as RequestBody ?? {} as RequestBody;
 
   if (typeof text !== 'string' || !text.trim()) {
     return ctx.badRequest('Text is required for AI assist operations.');
