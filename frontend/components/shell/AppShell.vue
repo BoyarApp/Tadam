@@ -60,10 +60,12 @@
 import { useTheme } from 'vuetify';
 import { usePreferencesStore } from '~/stores/preferences';
 import { useSessionStore } from '~/stores/session';
+import { useAnalytics } from '~/composables/useAnalytics';
 
 const preferences = usePreferencesStore();
 const theme = useTheme();
 const session = useSessionStore();
+const { trackEvent } = useAnalytics();
 
 const isDistrictDrawerOpen = ref(false);
 
@@ -109,18 +111,14 @@ const supporterBannerClasses = computed(() =>
     : 'bg-emerald-600 text-white border-emerald-500',
 );
 
-const track = (event: string, props?: Record<string, any>) => {
-  if (process.client && typeof (window as any).plausible === 'function') {
-    (window as any).plausible(event, { props });
-  }
-};
-
 const dismissSupporterBanner = () => {
   supporterBannerState.value = false;
   if (process.client) {
     localStorage.setItem('tadam-supporter-banner-dismissed', '1');
   }
-  track('membership_supporter_banner_dismissed');
+  trackEvent('page_view', {
+    page: 'membership_banner_dismissed',
+  });
 };
 
 const handleToggleTheme = () => {
@@ -149,9 +147,10 @@ watch([isSupporter, hasPendingCancellation], ([supporterNext, cancelNext], [supp
     localStorage.removeItem('tadam-supporter-banner-dismissed');
   }
   supporterBannerState.value = true;
-  track('membership_supporter_banner_shown', {
+  trackEvent('page_view', {
+    page: 'membership_banner_shown',
     supporter: supporterNext,
-    cancellationPending: cancelNext,
+    cancellation_pending: cancelNext,
   });
 });
 </script>

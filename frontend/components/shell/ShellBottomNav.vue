@@ -1,9 +1,12 @@
 <template>
   <VBottomNavigation grow elevation="4">
-    <VBtn icon="mdi-home-variant" />
+    <VBtn to="/" icon="mdi-home-variant" />
     <VBtn icon="mdi-compass" @click="$emit('open-districts')" />
-    <VBtn :icon="theme === 'dark' ? 'mdi-weather-sunny' : 'mdi-weather-night'" @click="$emit('toggle-theme')" />
-    <VBtn icon="mdi-bookmark-multiple" />
+    <VBtn
+      :icon="theme === 'dark' ? 'mdi-weather-sunny' : 'mdi-weather-night'"
+      @click="$emit('toggle-theme')"
+    />
+    <VBtn to="/account/membership" icon="mdi-account-heart" />
   </VBottomNavigation>
 </template>
 

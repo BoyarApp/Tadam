@@ -63,6 +63,48 @@
     <VDivider />
 
     <section>
+      <h2 class="text-xl font-semibold mb-3">Share this story</h2>
+      <div class="flex flex-wrap gap-2">
+        <VBtn
+          variant="outlined"
+          color="primary"
+          prepend-icon="mdi-share-variant"
+          @click="handleNativeShare"
+        >
+          Share
+        </VBtn>
+        <VBtn
+          variant="outlined"
+          color="primary"
+          prepend-icon="mdi-whatsapp"
+          :href="whatsappShareUrl"
+          target="_blank"
+        >
+          WhatsApp
+        </VBtn>
+        <VBtn
+          variant="outlined"
+          color="primary"
+          prepend-icon="mdi-twitter"
+          :href="twitterShareUrl"
+          target="_blank"
+        >
+          Twitter
+        </VBtn>
+        <VBtn
+          variant="outlined"
+          color="primary"
+          prepend-icon="mdi-link-variant"
+          @click="copyLink"
+        >
+          {{ linkCopied ? 'Copied!' : 'Copy Link' }}
+        </VBtn>
+      </div>
+    </section>
+
+    <VDivider />
+
+    <section>
       <h2 class="text-xl font-semibold mb-3">Explain briefly</h2>
       <VAlert type="info" variant="tonal" class="border border-sky-200">
         AI digest coming soon. Editors will review every summarised version before it reaches readers.
@@ -111,6 +153,62 @@ const publishedAt = computed(
   () =>
     DateTime.fromISO(props.article.publishedAt).toLocaleString(DateTime.DATETIME_MED) ?? 'Recently',
 );
+
+const linkCopied = ref(false);
+const route = useRoute();
+
+const shareUrl = computed(() => {
+  if (process.client) {
+    return window.location.href;
+  }
+  return `https://tadam.news/articles/${route.params.slug}`;
+});
+
+const shareText = computed(
+  () => `${props.article.title}\n\n${props.article.summary}`,
+);
+
+const whatsappShareUrl = computed(
+  () =>
+    `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText.value + '\n\n' + shareUrl.value)}`,
+);
+
+const twitterShareUrl = computed(
+  () =>
+    `https://twitter.com/intent/tweet?text=${encodeURIComponent(props.article.title)}&url=${encodeURIComponent(shareUrl.value)}`,
+);
+
+const handleNativeShare = async () => {
+  if (process.client && navigator.share) {
+    try {
+      await navigator.share({
+        title: props.article.title,
+        text: props.article.summary,
+        url: shareUrl.value,
+      });
+    } catch (err) {
+      if ((err as Error).name !== 'AbortError') {
+        console.warn('Share failed:', err);
+      }
+    }
+  } else {
+    await copyLink();
+  }
+};
+
+const copyLink = async () => {
+  if (process.client) {
+    try {
+      await navigator.clipboard.writeText(shareUrl.value);
+      linkCopied.value = true;
+      setTimeout(() => {
+        linkCopied.value = false;
+      }, 2000);
+    } catch (err) {
+      console.warn('Copy failed:', err);
+    }
+  }
+};
 </script>
 
 <style scoped>

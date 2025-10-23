@@ -1,15 +1,30 @@
 <template>
   <VContainer class="max-w-4xl py-8 space-y-8">
-    <ArticleLayout :article="article" />
+    <VAlert v-if="error" type="error" variant="tonal" class="mb-4">
+      {{ error }}
+    </VAlert>
+
+    <div v-if="loading" class="flex justify-center items-center py-16">
+      <VProgressCircular indeterminate color="primary" size="64" />
+    </div>
+
+    <ArticleLayout v-else-if="article" :article="article" />
   </VContainer>
 </template>
 
 <script setup lang="ts">
 import type { ArticlePayload } from '~/components/article/ArticleLayout.vue';
+import { useArticles } from '~/composables/useArticles';
 
 const route = useRoute();
+const { fetchArticle } = useArticles();
 
-const article = ref<ArticlePayload>({
+const article = ref<ArticlePayload | null>(null);
+const loading = ref(true);
+const error = ref<string | null>(null);
+
+// Mock article for fallback
+const MOCK_ARTICLE: ArticlePayload = {
   title: 'Metro water board announces new rationing schedule for Chennai',
   summary:
     'The Metro Water board introduces an optimised supply cycle for north Chennai zones starting next week.',
@@ -35,7 +50,7 @@ const article = ref<ArticlePayload>({
     {
       id: 'rel-1',
       title: 'How Chennai plans to recycle 40% of wastewater by 2026',
-      summary: 'An explainer on the city’s upcoming tertiary treatment plants.',
+      summary: 'An explainer on the city upcoming tertiary treatment plants.',
     },
     {
       id: 'rel-2',
@@ -43,21 +58,37 @@ const article = ref<ArticlePayload>({
       summary: 'Tips from civic engineers for household storage units.',
     },
   ],
+};
+
+onMounted(async () => {
+  const slug = String(route.params.slug);
+
+  try {
+    article.value = await fetchArticle(slug);
+  } catch (err) {
+    console.warn(`Article API unavailable for ${slug}, using mock data:`, err);
+    article.value = MOCK_ARTICLE;
+    error.value = null; // Don't show error for mock fallback
+  } finally {
+    loading.value = false;
+  }
 });
 
-useHead({
-  title: `${article.value.title} | Tadam`,
-  meta: [
-    { name: 'description', content: article.value.summary },
-    { property: 'og:title', content: article.value.title },
-    { property: 'og:description', content: article.value.summary },
-    { property: 'og:type', content: 'article' },
-  ],
-});
+useHead(() => ({
+  title: article.value ? `${article.value.title} | Tadam` : 'Article | Tadam',
+  meta: article.value
+    ? [
+        { name: 'description', content: article.value.summary },
+        { property: 'og:title', content: article.value.title },
+        { property: 'og:description', content: article.value.summary },
+        { property: 'og:type', content: 'article' },
+      ]
+    : [],
+}));
 
 definePageMeta({
   layout: 'default',
-  key: route => route.fullPath,
+  key: (route: any) => route.fullPath,
 });
 
 if (process.client) {

@@ -249,6 +249,7 @@
 
 <script setup lang="ts">
 import { useSessionStore } from '~/stores/session';
+import { useAnalytics } from '~/composables/useAnalytics';
 
 import { ref, computed, reactive, onMounted, watch } from 'vue';
 
@@ -265,6 +266,7 @@ const cancelMessage = ref<string | null>(null);
 
 const router = useRouter();
 const session = useSessionStore();
+const { trackMembershipEvent, trackEvent, trackError } = useAnalytics();
 const ledgerEntries = ref<any[]>([]);
 const supporterBannerState = useState('supporter-banner-visible', () => false);
 
@@ -272,12 +274,6 @@ const cancelForm = reactive({
   merchantTransactionId: '',
   reason: '',
 });
-
-const analytics = (event: string, props?: Record<string, any>) => {
-  if (process.client && typeof (window as any).plausible === 'function') {
-    (window as any).plausible(event, { props });
-  }
-};
 
 const isSupporter = computed(() => session.isSupporter);
 const hasPendingCancellation = computed(() => session.hasPendingCancellation);
@@ -393,7 +389,11 @@ const startPayment = async () => {
   loading.value = true;
 
   try {
-    analytics('membership_payment_start', { amount: planAmount });
+    // Track payment start
+    trackMembershipEvent('checkout_start', {
+      plan: 'Supporter Pass',
+      amount: planAmount,
+    });
 
     const response = await $fetch<{ merchantTransactionId: string; paymentPageUrl: string }>(
       '/api/phonepe/order',
@@ -437,18 +437,27 @@ const checkStatus = async () => {
     const response = await $fetch<{ status: any }>(`/api/phonepe/status/${transactionId}`);
     const state = response.status?.data?.state ?? 'PENDING';
     statusState.value = state;
-    analytics('membership_payment_status', { state });
 
     if (state === 'COMPLETED') {
       message.value = 'Payment successful! Membership activated.';
-      analytics('membership_payment_success', { state });
+
+      // Track successful payment
+      trackMembershipEvent('checkout_complete', {
+        transactionId,
+      });
+
       localStorage.removeItem('tadam-supporter-banner-dismissed');
       supporterBannerState.value = true;
       await session.fetchProfile(true);
       await fetchLedger();
     } else if (state === 'FAILED' || state === 'DECLINED') {
       error.value = 'Payment failed or declined. Please try again.';
-      analytics('membership_payment_failure', { state });
+
+      // Track failed payment
+      trackMembershipEvent('checkout_failed', {
+        transactionId,
+        errorReason: state,
+      });
     } else {
       message.value = 'Payment is still processing. Please try again shortly.';
     }
@@ -501,10 +510,14 @@ const requestCancellation = async () => {
 
     if (response.success) {
       cancelMessage.value = 'Cancellation requested. We will email you once the refund is processed.';
-      analytics('membership_cancel_request', {
-        merchantTransactionId: cancelForm.merchantTransactionId,
-        refundRequestId: response.refundRequestId,
+
+      // Track cancellation request
+      trackEvent('page_view', {
+        page: 'membership_cancel',
+        transaction_id: cancelForm.merchantTransactionId,
+        refund_request_id: response.refundRequestId,
       });
+
       cancelForm.reason = '';
       localStorage.removeItem('tadam-supporter-banner-dismissed');
       supporterBannerState.value = true;
@@ -514,7 +527,13 @@ const requestCancellation = async () => {
   } catch (err: any) {
     const errorMessage = err?.data?.error ?? err?.message ?? 'Unable to submit cancellation request right now.';
     cancelError.value = errorMessage;
-    analytics('membership_cancel_request_failed', { message: errorMessage });
+
+    // Track cancellation failure
+    trackError({
+      errorType: 'membership_cancel_failed',
+      errorMessage,
+      context: 'membership-page',
+    });
   } finally {
     cancelLoading.value = false;
   }

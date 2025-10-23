@@ -128,11 +128,18 @@ export const useFeed = () => {
     }
     loading.value = true;
     try {
+      const config = useRuntimeConfig();
       const params = buildParams(preferences);
-      const response = await $fetch<{ sections: FeedPayload[] }>('/api/feed', { params });
+      const url = `${config.public.apiBase}/api/feed`;
+
+      const response = await $fetch<{ sections: FeedPayload[] }>(url, {
+        params,
+        credentials: 'include',
+      });
+
       feeds.value = response?.sections?.length ? mapSections(response.sections) : [...SAMPLE_DATA];
     } catch (err) {
-      console.warn('Falling back to sample feed', err);
+      console.warn('Feed API unavailable, falling back to sample data:', err);
       feeds.value = [...SAMPLE_DATA];
     } finally {
       loading.value = false;

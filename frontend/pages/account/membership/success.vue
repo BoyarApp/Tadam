@@ -32,8 +32,10 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { useSessionStore } from '~/stores/session';
+import { useAnalytics } from '~/composables/useAnalytics';
 
 const route = useRoute();
+const { trackMembershipEvent, trackEvent } = useAnalytics();
 const loading = ref(false);
 const statusState = ref<string | null>(null);
 const error = ref<string | null>(null);
@@ -41,12 +43,6 @@ const message = ref<string | null>(null);
 const transactionId = ref<string | null>(null);
 const session = useSessionStore();
 const supporterBannerState = useState('supporter-banner-visible', () => false);
-
-const analytics = (event: string, props?: Record<string, any>) => {
-  if (process.client && typeof (window as any).plausible === 'function') {
-    (window as any).plausible(event, { props });
-  }
-};
 
 const deriveTransactionId = () => {
   if (process.server) {
@@ -80,17 +76,29 @@ const refreshStatus = async () => {
     const response = await $fetch<{ status: any }>(`/api/phonepe/status/${transactionId.value}`);
     const state = response.status?.data?.state ?? 'PENDING';
     statusState.value = state;
-    analytics('membership_status_poll', { state, context: 'success-page' });
+
+    // Track status poll
+    trackEvent('page_view', { page: 'membership_status', state, context: 'success-page' });
 
     if (state === 'COMPLETED') {
       message.value = 'Payment confirmed! You now have ad-free access.';
-      analytics('membership_payment_success', { state, context: 'success-page' });
+
+      // Track successful payment
+      trackMembershipEvent('checkout_complete', {
+        transactionId: transactionId.value,
+      });
+
       localStorage.removeItem('tadam-supporter-banner-dismissed');
       supporterBannerState.value = true;
       session.fetchProfile(true);
     } else if (state === 'FAILED' || state === 'DECLINED') {
       error.value = 'Payment failed or was declined. Please retry your purchase.';
-      analytics('membership_payment_failure', { state, context: 'success-page' });
+
+      // Track failed payment
+      trackMembershipEvent('checkout_failed', {
+        transactionId: transactionId.value,
+        errorReason: state,
+      });
     } else {
       message.value = 'Payment is still being processed by the bank. Please check again soon.';
     }
