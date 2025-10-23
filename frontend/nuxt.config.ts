@@ -6,6 +6,10 @@ export default defineNuxtConfig({
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt', '@vite-pwa/nuxt'],
   css: ['~/assets/styles/main.scss', '@mdi/font/css/materialdesignicons.min.css'],
   components: [{ path: '~/components', pathPrefix: false }],
+  pages: true,
+  dir: {
+    pages: 'pages',
+  },
   runtimeConfig: {
     public: {
       apiBase: process.env.NUXT_PUBLIC_API_URL ?? 'http://localhost:1337',
