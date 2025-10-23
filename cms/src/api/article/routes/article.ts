@@ -1,6 +1,14 @@
 export default {
   routes: [
     {
+      method: 'GET',
+      path: '/articles/related',
+      handler: 'api::article.article.related',
+      config: {
+        auth: false,
+      },
+    },
+    {
       method: 'POST',
       path: '/articles/:id/submit',
       handler: 'api::article.article.submitForReview',

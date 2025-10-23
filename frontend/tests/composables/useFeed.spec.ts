@@ -4,11 +4,15 @@ import { nextTick } from 'vue';
 import { useFeed } from '~/composables/useFeed';
 
 const originalFetch = globalThis.$fetch;
+const originalRuntimeConfig = (globalThis as any).useRuntimeConfig;
 
 describe('useFeed', () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     globalThis.$fetch = vi.fn().mockResolvedValue({ sections: [] });
+    (globalThis as any).useRuntimeConfig = () => ({
+      public: { apiBase: 'http://localhost:1337' },
+    });
   });
 
   afterEach(() => {
@@ -17,6 +21,12 @@ describe('useFeed', () => {
       globalThis.$fetch = originalFetch;
     } else {
       globalThis.$fetch = undefined as any;
+    }
+
+    if (originalRuntimeConfig) {
+      (globalThis as any).useRuntimeConfig = originalRuntimeConfig;
+    } else {
+      delete (globalThis as any).useRuntimeConfig;
     }
   });
 
