@@ -2,13 +2,26 @@ import vuetify from 'vite-plugin-vuetify';
 
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NODE_ENV !== 'production' },
   modules: ['@nuxtjs/tailwindcss', '@pinia/nuxt', '@vite-pwa/nuxt'],
   css: ['~/assets/styles/main.scss', '@mdi/font/css/materialdesignicons.min.css'],
   components: [{ path: '~/components', pathPrefix: false }],
   pages: true,
   dir: {
     pages: 'pages',
+  },
+  experimental: {
+    payloadExtraction: true,
+    renderJsonPayloads: true,
+  },
+  nitro: {
+    compressPublicAssets: true,
+    minify: true,
+    preset: 'node-server',
+  },
+  sourcemap: {
+    server: false,
+    client: process.env.NODE_ENV !== 'production',
   },
   runtimeConfig: {
     public: {
