@@ -1,0 +1,227 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: tadam-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - ${POSTGRES_PORT:-5432}:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - tadam-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-tadam}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+  redis:
+    image: redis:7-alpine
+    container_name: tadam-redis
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+    restart: always
+    ports:
+      - ${REDIS_PORT:-6379}:6379
+    volumes:
+      - redis-data:/data
+    networks:
+      - tadam-net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 128M
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.7
+    container_name: tadam-meilisearch
+    environment:
+      MEILI_MASTER_KEY: ${MEILISEARCH_MASTER_KEY}
+      MEILI_ENV: production
+      MEILI_NO_ANALYTICS: true
+      MEILI_HTTP_PAYLOAD_SIZE_LIMIT: 104857600
+      MEILI_LOG_LEVEL: INFO
+    restart: always
+    ports:
+      - ${MEILISEARCH_PORT:-7700}:7700
+    volumes:
+      - meili-data:/meili_data
+    networks:
+      - tadam-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:7700/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 256M
+
+  minio:
+    image: minio/minio:RELEASE.2024-04-18T19-09-19Z
+    container_name: tadam-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-http://localhost:9001}
+    restart: always
+    ports:
+      - ${MINIO_PORT:-9000}:9000
+      - ${MINIO_CONSOLE_PORT:-9001}:9001
+    volumes:
+      - minio-data:/data
+    networks:
+      - tadam-net
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+  cms:
+    build:
+      context: ../cms
+      dockerfile: Dockerfile
+      target: runner
+    image: tadam-cms:latest
+    container_name: tadam-cms
+    restart: always
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      meilisearch:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_CLIENT: postgres
+      DATABASE_HOST: postgres
+      DATABASE_PORT: 5432
+      DATABASE_NAME: ${POSTGRES_DB}
+      DATABASE_USERNAME: ${POSTGRES_USER}
+      DATABASE_PASSWORD: ${POSTGRES_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      MEILISEARCH_HOST: http://meilisearch:7700
+      MEILISEARCH_MASTER_KEY: ${MEILISEARCH_MASTER_KEY}
+      MINIO_ENDPOINT: minio
+      MINIO_PORT: 9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      ADMIN_JWT_SECRET: ${ADMIN_JWT_SECRET}
+      APP_KEYS: ${APP_KEYS}
+      API_TOKEN_SALT: ${API_TOKEN_SALT}
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY}
+      TRANSFER_TOKEN_SALT: ${TRANSFER_TOKEN_SALT}
+      JWT_SECRET: ${JWT_SECRET}
+      PHONEPE_MERCHANT_ID: ${PHONEPE_MERCHANT_ID}
+      PHONEPE_SALT_KEY: ${PHONEPE_SALT_KEY}
+      PHONEPE_SALT_INDEX: ${PHONEPE_SALT_INDEX}
+      PHONEPE_BASE_URL: ${PHONEPE_BASE_URL}
+      PHONEPE_CALLBACK_URL: ${PHONEPE_CALLBACK_URL}
+      PHONEPE_REDIRECT_URL: ${PHONEPE_REDIRECT_URL}
+      EDITORIAL_AI_BASE_URL: ${EDITORIAL_AI_BASE_URL}
+      EDITORIAL_AI_API_KEY: ${EDITORIAL_AI_API_KEY}
+      EDITORIAL_AI_MODEL: ${EDITORIAL_AI_MODEL}
+      EDITORIAL_COMPLIANCE_BASE_URL: ${EDITORIAL_COMPLIANCE_BASE_URL}
+      EDITORIAL_COMPLIANCE_API_KEY: ${EDITORIAL_COMPLIANCE_API_KEY}
+      SENTRY_DSN: ${SENTRY_DSN}
+      STRAPI_TELEMETRY_DISABLED: true
+    ports:
+      - ${STRAPI_PORT:-1337}:1337
+    networks:
+      - tadam-net
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          cpus: '1'
+          memory: 1G
+      replicas: 1
+
+  frontend:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+      target: runner
+    image: tadam-frontend:latest
+    container_name: tadam-frontend
+    restart: always
+    depends_on:
+      cms:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      NUXT_PUBLIC_API_URL: ${NUXT_PUBLIC_API_URL:-http://cms:1337}
+      NUXT_PUBLIC_MEILISEARCH_URL: ${NUXT_PUBLIC_MEILISEARCH_URL:-http://meilisearch:7700}
+      NUXT_PUBLIC_MEDIA_URL: ${NUXT_PUBLIC_MEDIA_URL}
+      NUXT_PUBLIC_PLAUSIBLE_DOMAIN: ${NUXT_PUBLIC_PLAUSIBLE_DOMAIN}
+      NUXT_PUBLIC_PLAUSIBLE_SCRIPT_URL: ${NUXT_PUBLIC_PLAUSIBLE_SCRIPT_URL}
+      NUXT_PUBLIC_SENTRY_DSN: ${NUXT_PUBLIC_SENTRY_DSN}
+      NUXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE: ${NUXT_PUBLIC_SENTRY_TRACES_SAMPLE_RATE:-0.1}
+    ports:
+      - ${NUXT_PORT:-3000}:3000
+    networks:
+      - tadam-net
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      replicas: 1
+
+networks:
+  tadam-net:
+    driver: bridge
+
+volumes:
+  postgres-data:
+  redis-data:
+  meili-data:
+  minio-data:
